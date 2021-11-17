@@ -1,6 +1,7 @@
 
 # principal type: https://github.com/dfinity/ic-types/blob/main/src/principal.rs
 
+import hashlib
 from enum import Enum
 
 CRC_LENGTH_IN_BYTES = 4
@@ -15,16 +16,22 @@ class PrincipalClass(Enum):
     Unassigned
 
 class Principal(Object):
-    def __init__(self):
-        self.len = 0
-        self.bytes = [0 * MAX_LENGTH_IN_BYTES]
+    def __init__(self, bytes = [0 * MAX_LENGTH_IN_BYTES]):
+        self.len = len(bytes) 
+        self.bytes = bytes 
 
-    @static
+    @staticmethod
     def management_canister():
-        pass
+        return Principal()
 
-    @static
+    @staticmethod
     def self_authenticating(pubkey):
+        hash_ = hashlib.sha224(pubkey)
+        hash_.append(PrincipalClass.SelfAuthenticating.value)
+        return Principal(len(hash_), hash_)
+
+    @staticmethod
+    def anonymous():
         pass
 
     def from_str(): 
