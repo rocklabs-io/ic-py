@@ -1,6 +1,9 @@
 
 # principal type: https://github.com/dfinity/ic-types/blob/main/src/principal.rs
 
+import zlib
+import math
+import base64
 import hashlib
 from enum import Enum
 
@@ -13,12 +16,12 @@ class PrincipalClass(Enum):
     SelfAuthenticating = 2
     DerivedId = 3
     Anonymous = 4
-    Unassigned
+    # Unassigned
 
-class Principal(Object):
-    def __init__(self, bytes = [0 * MAX_LENGTH_IN_BYTES]):
-        self.len = len(bytes) 
-        self.bytes = bytes 
+class Principal:
+    def __init__(self, bytes = b''):
+        self._len = len(bytes) 
+        self._bytes = bytes 
 
     @staticmethod
     def management_canister():
@@ -27,21 +30,49 @@ class Principal(Object):
     @staticmethod
     def self_authenticating(pubkey):
         hash_ = hashlib.sha224(pubkey)
-        hash_.append(PrincipalClass.SelfAuthenticating.value)
-        return Principal(len(hash_), hash_)
+        hash_ += bytes([PrincipalClass.SelfAuthenticating.value])
+        return Principal(bytes = hash_)
 
     @staticmethod
     def anonymous():
-        pass
+        return Principal(bytes = b'\x04')
 
-    def from_str(): 
-        pass
+    @property
+    def len(self):
+        return self._len
 
-    def from_bytes():
-        pass
+    @property
+    def bytes(self):
+        return self._bytes
 
-    def to_bytes():
-        pass
+    @staticmethod
+    def from_str(s): 
+        s1 = s.replace('-', '')
+        pad_len = math.ceil(len(s1) / 8) * 8 - len(s1)
+        b = base64.b32decode(s1.upper().encode() + b'=' * pad_len)
+        if len(b) < CRC_LENGTH_IN_BYTES:
+            raise "principal length error"
+        p = Principal(bytes = b[CRC_LENGTH_IN_BYTES:])
+        if not p.to_str() == s:
+            raise "principal format error"
+        return p
 
-    def to_str():
-        pass
+    def to_str(self):
+        checksum = zlib.crc32(self._bytes)
+        b = b''
+        b += checksum.to_bytes(4, byteorder='big')
+        b += self.bytes
+        s = base64.b32encode(b).decode('utf-8').lower().replace('=', '')
+        ret = ''
+        while len(s) > 5:
+            ret += s[:5]
+            ret += '-'
+            s = s[5:]
+        ret += s
+        return ret
+
+    def __repr__(self):
+        return "Principal(" + self.to_str() + ")"
+
+    def __str__(self):
+        return self.to_str()
