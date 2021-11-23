@@ -29,7 +29,7 @@ class Principal:
 
     @staticmethod
     def self_authenticating(pubkey):
-        hash_ = hashlib.sha224(pubkey)
+        hash_ = hashlib.sha224(pubkey).digest()
         hash_ += bytes([PrincipalClass.SelfAuthenticating.value])
         return Principal(bytes = hash_)
 
@@ -58,9 +58,9 @@ class Principal:
         return p
 
     def to_str(self):
-        checksum = zlib.crc32(self._bytes)
+        checksum = zlib.crc32(self._bytes) & 0xFFFFFFFF
         b = b''
-        b += checksum.to_bytes(4, byteorder='big')
+        b += checksum.to_bytes(CRC_LENGTH_IN_BYTES, byteorder='big')
         b += self.bytes
         s = base64.b32encode(b).decode('utf-8').lower().replace('=', '')
         ret = ''
