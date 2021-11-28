@@ -3,7 +3,7 @@
 
 import ecdsa
 import hashlib
-from . import der
+# from .der import *
 from .principal import Principal
 
 # TODO: complete ed25519 support
@@ -71,4 +71,4 @@ class Identity:
         return "Identity(" + self.key_type + ', ' + self._privkey + ", " + self._pubkey + ")"
 
     def __str__(self):
-        return "(" + self.key_type + ', ' self._privkey + ", " + self._pubkey + ")"
+        return "(" + self.key_type + ', ' + self._privkey + ", " + self._pubkey + ")"
