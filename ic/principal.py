@@ -22,7 +22,8 @@ class Principal:
     def __init__(self, bytes = b''):
         self._len = len(bytes) 
         self._bytes = bytes 
-
+        self.hex = str(self._bytes.hex()).upper()
+        
     @staticmethod
     def management_canister():
         return Principal()
@@ -58,6 +59,10 @@ class Principal:
         if not p.to_str() == s:
             raise "principal format error"
         return p
+
+    @staticmethod
+    def from_hex(s):
+        return Principal(bytes.fromhex(s.lower()))
 
     def to_str(self):
         checksum = zlib.crc32(self._bytes) & 0xFFFFFFFF
