@@ -1,6 +1,6 @@
 import hashlib
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, PublicFormat, NoEncryption
+from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, PublicFormat, NoEncryption, load_pem_private_key
 from cryptography.hazmat.primitives.asymmetric import ed25519, ec
 from .principal import Principal
 
@@ -18,7 +18,10 @@ class Identity:
             self._pubkey = self.vk.public_bytes(encoding=Encoding.DER, format=PublicFormat.SubjectPublicKeyInfo).hex()
             self._der_pubkey = self.vk.public_bytes(encoding=Encoding.DER, format=PublicFormat.SubjectPublicKeyInfo)
         elif type == 'ed25519':
-            self.sk = ed25519.Ed25519PrivateKey.generate()
+            if len(privkey) > 0:
+                self.sk = ed25519.Ed25519PrivateKey.from_private_bytes(privkey)
+            else:
+                self.sk = ed25519.Ed25519PrivateKey.generate()
             self.vk = self.sk.public_key()
             self._privkey = self.sk.private_bytes(encoding=Encoding.Raw, format=PrivateFormat.Raw, encryption_algorithm=NoEncryption()).hex()
             self._pubkey = self.vk.public_bytes(encoding=Encoding.Raw, format=PublicFormat.Raw).hex()
@@ -29,7 +32,9 @@ class Identity:
 
     @staticmethod
     def from_pem(pem: str):
-        pass
+        key = load_pem_private_key(pem.encode())
+        privkey = key.private_bytes(encoding=Encoding.Raw, format=PrivateFormat.Raw, encryption_algorithm=NoEncryption()).hex()
+        return Identity(privkey=privkey, type='ed25519')
 
     def to_pem(self):
         pass

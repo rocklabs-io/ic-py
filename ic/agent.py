@@ -10,6 +10,7 @@ def sign_request(req, iden):
     req_id = to_request_id(req)
     msg = IC_REQUEST_DOMAIN_SEPARATOR + req_id
     sig = iden.sign(msg)
+    print(sig[0].hex(), sig[1].hex())
     envelop = {
         'content': req,
         'sender_pubkey': sig[0],
