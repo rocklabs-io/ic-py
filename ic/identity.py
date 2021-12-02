@@ -1,14 +1,11 @@
-
-# identity type: https://github.com/dfinity/agent-rs/tree/main/ic-agent/src/identity
-
 import ecdsa
 import hashlib
 # from .der import *
 from .principal import Principal
 
-# TODO: complete ed25519 support
 class Identity:
-    def __init__(self, privkey = "", type = "secp256k1", anonymous = False):
+    def __init__(self, privkey = "", type = "ed25519", anonymous = False):
+        privkey = bytes(bytearray.fromhex(privkey))
         self.anonymous = anonymous
         if anonymous:
             return
@@ -24,23 +21,21 @@ class Identity:
             self._der_pubkey = self.vk.to_der().hex()
         elif type == 'ed25519':
             if len(privkey) > 0:
-                self.sk = ed25519.SigningKey(privkey.encode(), encoding='hex') 
+                self.sk = ecdsa.SigningKey.from_string(privkey, curve=ecdsa.Ed25519)
                 self.vk = self.sk.get_verifying_key() 
             else:
-                (self.sk, self.vk) = ed25519.create_keypair()
-            self._privkey = self.sk.to_ascii(encoding='hex')
-            self._pubkey = self.vk.to_ascii(encoding='hex')
-            # self._der_pubkey = 
+                self.sk = ecdsa.SigningKey.generate(curve=ecdsa.Ed25519)
+            self._privkey = self.sk.to_string().hex()
+            self.vk = self.sk.get_verifying_key()
+            self._pubkey = self.vk.to_string().hex()
+            self._der_pubkey = self.vk.to_der().hex()
         else:
             raise 'unsupported identity type'
 
     @staticmethod
     def from_pem(pem: str):
-        if self.key_type == 'secp256k1':
-            sk = ecdsa.SigningKey.from_pem(pem)
-            return Identity(sk.to_string().hex())
-        else:
-            pass
+        sk = ecdsa.SigningKey.from_pem(pem)
+        return Identity(sk.to_string().hex())
 
     def to_pem(self):
         if self.key_type == 'secp256k1':
