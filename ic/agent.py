@@ -36,6 +36,7 @@ class Agent:
 
     def query_endpoint(self, canister_id, data):
         ret = self.client.query(canister_id, data)
+        print(ret)
         return cbor2.loads(ret)
 
     def call_endpoint(self, canister_id, request_id, data):
@@ -44,6 +45,7 @@ class Agent:
 
     def query_raw(self, canister_id, method_name, arg):
         req = {
+            'request_type': "query",
             'sender': self.identity.sender().bytes,
             'canister_id': Principal.from_str(canister_id).bytes if isinstance(canister_id, str) else canister_id.bytes,
             'method_name': method_name,

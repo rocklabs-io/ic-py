@@ -6,4 +6,4 @@ ag = Agent(Identity(), Client())
 
 ret = ag.query_raw("gvbup-jyaaa-aaaah-qcdwa-cai", "totalSupply", b'')
 
-print(ret)
+# print(ret)
