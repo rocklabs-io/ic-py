@@ -1,5 +1,6 @@
 import leb128
 from enum import Enum
+from .principal import Principal
 
 class Types(Enum):
     Null = -1
@@ -43,6 +44,13 @@ def encode_type(t, v):
         return int.to_bytes(v, 4, byteorder='big')
     elif t == Types.Nat64:
         return int.to_bytes(v, 8, byteorder='big')
+    elif t == Types.Principal:
+        if isinstance(v, str):
+            return Principal.from_str(v).bytes
+        elif isinstance(v, Principal):
+            return v.bytes
+        elif isinstance(v, bytes):
+            return v
     # TODO: int8, int32, int64, float32, float64, text, ...
 
 prefix = "DIDL"
