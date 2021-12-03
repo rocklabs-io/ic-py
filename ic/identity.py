@@ -32,12 +32,13 @@ class Identity:
 
     @staticmethod
     def from_pem(pem: str):
-        key = load_pem_private_key(pem.encode())
+        key = load_pem_private_key(pem.encode(), password=None)
         privkey = key.private_bytes(encoding=Encoding.Raw, format=PrivateFormat.Raw, encryption_algorithm=NoEncryption()).hex()
         return Identity(privkey=privkey, type='ed25519')
 
     def to_pem(self):
-        pass
+        pem = self.sk.private_bytes(encoding=Encoding.PEM, format=PrivateFormat.PKCS8, encryption_algorithm=NoEncryption())
+        return pem
 
     def sender(self):
         if self.anonymous:

@@ -1,13 +1,14 @@
+import leb128
 import hashlib
 
 def to_request_id(d):
-    print(d)
     if not isinstance(d, dict):
+        print(d)
         pass
     vec = []
     for k, v in d.items():
         if isinstance(v, int):
-            v = str(v).encode()
+            v = bytes(leb128.u.encode(v))
         if not isinstance(k, bytes):
             k = k.encode()
         if not isinstance(v, bytes):
