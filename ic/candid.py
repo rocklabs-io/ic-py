@@ -51,6 +51,8 @@ def encode_type(t, v):
             return v.bytes
         elif isinstance(v, bytes):
             return v
+    elif t == Types.Empty:
+        return b''
     # TODO: int8, int32, int64, float32, float64, text, ...
 
 prefix = "DIDL"

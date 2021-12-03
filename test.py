@@ -10,8 +10,8 @@ sig = iden.sign(bytes(bytearray.fromhex(msg)))
 print(sig[1].hex())
 ag = Agent(iden, Client())
 
-# ret = ag.query_raw("gvbup-jyaaa-aaaah-qcdwa-cai", "totalSupply", '')
-ret = ag.query_raw("gvbup-jyaaa-aaaah-qcdwa-cai", "name", b'')
+# ret = ag.query_raw("gvbup-jyaaa-aaaah-qcdwa-cai", "totalSupply", encode([]))
+ret = ag.query_raw("gvbup-jyaaa-aaaah-qcdwa-cai", "name", encode([]))
 '''
 ret = ag.query_raw(
         "gvbup-jyaaa-aaaah-qcdwa-cai",

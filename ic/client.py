@@ -10,7 +10,7 @@ class Client:
         endpoint = self.url + '/api/v2/canister/' + canister_id + '/query'
         headers = {'Content-Type': 'application/cbor'}
         ret = requests.post(endpoint, data, headers=headers)
-        print(ret.text)
+        return ret.text
 
     def call(self, canister_id, data):
         pass
