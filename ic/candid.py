@@ -73,4 +73,4 @@ def encode(params):
     return data
 
 def decode(data):
-    pass
+    print('candid decode')
