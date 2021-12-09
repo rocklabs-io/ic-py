@@ -87,12 +87,20 @@ class Agent:
         print(result)
 
     def read_state_raw(self, canister_id, paths):
-        pass
+        req = {
+            'sender': self.identity.sender().bytes,
+            'paths': paths, 
+            'ingress_expiry': self.get_expiry_date(),
+        }
+        _, data = sign_request(req, self.identity)
+        ret = self.read_state_endpoint(canister_id, data)
+        cert = cbor2.loads(ret)
+        return cert
 
     def request_status_raw(self, canister_id, req_id):
-        # paths = []
-        # cert = self.read_state_raw(canister_id, paths)
-        # lookup_request_status(cert, req_id)
+        paths = []
+        cert = self.read_state_raw(canister_id, paths)
+        lookup_request_status(cert, req_id)
 
     def poll(self, canister_id, req_id):
         ret = self.request_status_raw(canister_id, req_id)

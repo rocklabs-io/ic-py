@@ -27,4 +27,7 @@ class Client:
         return ret.text
 
     def status(self):
-        pass
+        endpoint = self.url + '/api/v2/status'
+        ret = requests.get(endpoint)
+        print(ret.text)
+        return ret.text
