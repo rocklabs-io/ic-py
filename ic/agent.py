@@ -16,7 +16,7 @@ def sign_request(req, iden):
         'sender_pubkey': sig[0],
         'sender_sig': sig[1]
     }
-    return cbor2.dumps(envelop)
+    return req_id, cbor2.dumps(envelop)
 
 class Agent:
     def __init__(self, identity, client, nonce_factory=None, ingress_expiry=300, root_key=IC_ROOT_KEY):
@@ -49,6 +49,10 @@ class Agent:
         self.client.call(canister_id, data, request_id)
         return request_id
 
+    def read_state_endpoint(self, canister_id, data):
+        result = self.client.read_state(canister_id, data)
+        return result
+
     def query_raw(self, canister_id, method_name, arg):
         req = {
             'request_type': "query",
@@ -58,7 +62,7 @@ class Agent:
             'arg': arg,
             'ingress_expiry': self.get_expiry_date()
         }
-        data = sign_request(req, self.identity)
+        _, data = sign_request(req, self.identity)
         result = self.query_endpoint(canister_id, data)
         print(result)
         if result['status'] == 'replied':
@@ -68,11 +72,28 @@ class Agent:
             return result['reject_message']
 
     def update_raw(self):
+        req = {
+            'request_type': "call",
+            'sender': self.identity.sender().bytes,
+            'canister_id': Principal.from_str(canister_id).bytes if isinstance(canister_id, str) else canister_id.bytes,
+            'method_name': method_name,
+            'arg': arg,
+            'ingress_expiry': self.get_expiry_date()
+        }
+        req_id, data = sign_request(req, self.identity)
+        _ = self.call_endpoint(canister_id, req_id, data)
+        # poll req_id status to get result
+        result = self.poll(canister_id, req_id)
+        print(result)
+
+    def read_state_raw(self, canister_id, paths):
         pass
 
-    def poll(self, req_id, canister_id):
-        pass
+    def request_status_raw(self, canister_id, req_id):
+        # paths = []
+        # cert = self.read_state_raw(canister_id, paths)
+        # lookup_request_status(cert, req_id)
 
-    def request_status_raw(self, req_id, canister_id):
-        pass
-
+    def poll(self, canister_id, req_id):
+        ret = self.request_status_raw(canister_id, req_id)
+        return ret
