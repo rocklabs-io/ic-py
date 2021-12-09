@@ -1,5 +1,6 @@
 import time
 import cbor2
+from .candid import *
 from .identity import *
 from .constants import *
 from .utils import to_request_id
@@ -10,7 +11,6 @@ def sign_request(req, iden):
     req_id = to_request_id(req)
     msg = IC_REQUEST_DOMAIN_SEPARATOR + req_id
     sig = iden.sign(msg)
-    print(sig[0].hex(), sig[1].hex())
     envelop = {
         'content': req,
         'sender_pubkey': sig[0],
@@ -37,8 +37,13 @@ class Agent:
 
     def query_endpoint(self, canister_id, data):
         ret = self.client.query(canister_id, data)
-        print(ret)
-        return cbor2.loads(ret.encode())
+        # print(ret.encode())
+        # remove tag 2 or tag 3 encode. 
+        ret = ret.encode()[7:] # the 7 bytes header may be length info.
+        if b'\xc2' or b'\xc3' in ret:
+            ret = ret.replace(b'\xc2', b'')
+            ret = ret.replace(b'\xc3', b'') 
+        return cbor2.loads(ret)
 
     def call_endpoint(self, canister_id, request_id, data):
         self.client.call(canister_id, data, request_id)
@@ -54,7 +59,13 @@ class Agent:
             'ingress_expiry': self.get_expiry_date()
         }
         data = sign_request(req, self.identity)
-        return self.query_endpoint(canister_id, data)
+        result = self.query_endpoint(canister_id, data)
+        print(result)
+        if result['status'] == 'replied':
+            arg = decode(result['reply']['arg'])
+            return arg
+        elif result['status'] == 'rejected':
+            return result['reject_message']
 
     def update_raw(self):
         pass

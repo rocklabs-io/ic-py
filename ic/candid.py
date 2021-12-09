@@ -74,4 +74,4 @@ def encode(params):
 
 # data: b'DIDL\x00\x01q\x08XTC Test'
 def decode(data):
-    pass
+    print('candid decode')
