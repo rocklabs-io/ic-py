@@ -72,5 +72,6 @@ def encode(params):
     data += value
     return data
 
+# data: b'DIDL\x00\x01q\x08XTC Test'
 def decode(data):
     pass
