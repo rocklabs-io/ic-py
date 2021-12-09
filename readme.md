@@ -1,6 +1,6 @@
 ## Python Agent Library for the IC
 
-`ic-py` provides basic modules for developers to interact with canisters on the DFINITY Internet Computer. Its still under active development.
+`ic-py` provides basic modules to interact with canisters on the DFINITY Internet Computer. Its still under active development.
 
 ### Modules & Usage
 
