@@ -16,6 +16,7 @@ def sign_request(req, iden):
         'sender_pubkey': sig[0],
         'sender_sig': sig[1]
     }
+    # print(req_id, envelop, cbor2.dumps(envelop))
     return req_id, cbor2.dumps(envelop)
 
 class Agent:
@@ -54,6 +55,7 @@ class Agent:
         return result
 
     def query_raw(self, canister_id, method_name, arg):
+        print(arg)
         req = {
             'request_type': "query",
             'sender': self.identity.sender().bytes,
@@ -71,7 +73,7 @@ class Agent:
         elif result['status'] == 'rejected':
             return result['reject_message']
 
-    def update_raw(self):
+    def update_raw(self, canister_id, method_name, arg):
         req = {
             'request_type': "call",
             'sender': self.identity.sender().bytes,
@@ -82,9 +84,10 @@ class Agent:
         }
         req_id, data = sign_request(req, self.identity)
         _ = self.call_endpoint(canister_id, req_id, data)
+        print('hhh')
         # poll req_id status to get result
-        result = self.poll(canister_id, req_id)
-        print(result)
+        # result = self.poll(canister_id, req_id)
+        # print(result)
 
     def read_state_raw(self, canister_id, paths):
         req = {

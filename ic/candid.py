@@ -45,12 +45,14 @@ def encode_type(t, v):
     elif t == Types.Nat64:
         return int.to_bytes(v, 8, byteorder='big')
     elif t == Types.Principal:
+        tag = int.to_bytes(1, 1, byteorder='big')
+        b = v
         if isinstance(v, str):
-            return Principal.from_str(v).bytes
+            b = Principal.from_str(v).bytes
         elif isinstance(v, Principal):
-            return v.bytes
-        elif isinstance(v, bytes):
-            return v
+            b = v.bytes
+        l = leb128.u.encode(len(b))
+        return tag + l + b
     elif t == Types.Empty:
         return b''
     # TODO: int8, int32, int64, float32, float64, text, ...
@@ -68,6 +70,7 @@ def encode(params):
     for p in params:
         ty += leb128.i.encode(p['type'].value)
         value += encode_type(p['type'], p['value'])
+    print(params, 'types:', ty, 'value:', value)
     data += ty
     data += value
     return data
