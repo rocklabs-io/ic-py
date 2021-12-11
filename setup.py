@@ -7,7 +7,7 @@ with open(path.join(this_directory, 'readme.md'), 'r') as f:
     long_description = f.read()
 
 setup(
-    name = 'ic',
+    name = 'ic-py',
     version = '0.0.1',
     description = 'Python Agent Library for the Internet Computer',
     long_description = long_description,
