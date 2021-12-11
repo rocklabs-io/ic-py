@@ -17,7 +17,7 @@ Create an instance:
 ```python
 from ic.principal import Principal
 p = Principal() # default is management canister id `aaaaa-aa`
-p1 = Principal(bytes=xxx) # create an instance from bytes
+p1 = Principal(bytes=b'') # create an instance from bytes
 p2 = Principal.anonymous() # create anonymous principal
 p3 = Principal.self_authenticating(pubkey) # create a principal from public key
 p4 = Principal.from_str('aaaaa-aa') # create an instance from string
@@ -83,7 +83,7 @@ Create an instance:
 ```python
 from ic.client import Client
 from ic.identity import Identity
-from ic.Agent import Agent
+from ic.agent import Agent
 # Identity and Client are dependencies of Agent
 iden = Identity()
 client = Client()
