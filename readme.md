@@ -1,6 +1,12 @@
-## Python Agent Library for the IC
+## Python Agent Library for the Internet Computer
 
 `ic-py` provides basic modules to interact with canisters on the DFINITY Internet Computer. Its still under active development.
+
+### Install
+
+```
+pip3 install ic-py
+```
 
 ### Modules & Usage
 
@@ -8,7 +14,8 @@
 
 Create an instance:
 
-```js
+```python
+from ic.principal import Principal
 p = Principal() # default is management canister id `aaaaa-aa`
 p1 = Principal(bytes=xxx) # create an instance from bytes
 p2 = Principal.anonymous() # create anonymous principal
@@ -19,7 +26,7 @@ p5 = Principal.from_hex('xxx') # create an instance from hex
 
 Class methods:
 
-```js
+```python
 p.bytes # principal bytes
 p.len # byte array length
 p.to_str() # convert to string
@@ -29,14 +36,15 @@ p.to_str() # convert to string
 
 Create an instance:
 
-```js
+```python
+from ic.identity import Identity
 i = Identity() # create an identity instance, key is randomly generated
 i1 = Identity(privkey = "833fe62409237b9d62ec77587520911e9a759cec1d19755b7da901b96dca3d42") # create an instance from private key
 ```
 
 Sign a message:
 
-```js
+```python
 msg = b”ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f“
 sig = i.sign(msg) # sig = (der_encoded_pubkey, signature)
 ```
@@ -45,7 +53,8 @@ sig = i.sign(msg) # sig = (der_encoded_pubkey, signature)
 
 Create an instance:
 
-```js
+```python
+from ic.client import Client
 client = Client(url = "https://ic0.app")
 ```
 
@@ -53,7 +62,8 @@ client = Client(url = "https://ic0.app")
 
 Encode parameters:
 
-```js
+```python
+from ic.candid import encode, decode
 # params is an array, return value is encoded bytes
 params = [{'type': Types.Nat, 'value': 10}]
 data = encode(params)
@@ -61,7 +71,7 @@ data = encode(params)
 
 Decode parameters:
 
-```js
+```python
 # data is bytes, return value is an parameter array
 params = decode(data)
 ```
@@ -70,7 +80,10 @@ params = decode(data)
 
 Create an instance:
 
-```js
+```python
+from ic.client import Client
+from ic.identity import Identity
+from ic.Agent import Agent
 # Identity and Client are dependencies of Agent
 iden = Identity()
 client = Client()
@@ -79,14 +92,14 @@ agent = Agent(iden, client)
 
 Query call:
 
-```js
+```python
 # query the name of token canister `gvbup-jyaaa-aaaah-qcdwa-cai`
 name = agent.query_raw("gvbup-jyaaa-aaaah-qcdwa-cai", "name", encode([]))
 ```
 
 Update call:
 
-```js
+```python
 # transfer 100 token to blackhole address `aaaaa-aa`
 params = [
 	{'type': Types.Principal, 'value': 'aaaaa-aa'},
