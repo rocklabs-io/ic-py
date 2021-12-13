@@ -70,7 +70,7 @@ def encode(params):
     for p in params:
         ty += leb128.i.encode(p['type'].value)
         value += encode_type(p['type'], p['value'])
-    print(params, 'types:', ty, 'value:', value)
+    # print(params, 'types:', ty, 'value:', value)
     data += ty
     data += value
     return data

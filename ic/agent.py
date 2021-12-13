@@ -47,7 +47,7 @@ class Agent:
         return cbor2.loads(ret)
 
     def call_endpoint(self, canister_id, request_id, data):
-        self.client.call(canister_id, data, request_id)
+        self.client.call(canister_id, request_id, data)
         return request_id
 
     def read_state_endpoint(self, canister_id, data):
@@ -84,7 +84,6 @@ class Agent:
         }
         req_id, data = sign_request(req, self.identity)
         _ = self.call_endpoint(canister_id, req_id, data)
-        print('hhh')
         # poll req_id status to get result
         # result = self.poll(canister_id, req_id)
         # print(result)
