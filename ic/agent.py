@@ -1,6 +1,7 @@
 import time
 import cbor2
-from .candid import *
+# from .candid import *
+from .candid2 import decode
 from .identity import *
 from .constants import *
 from .utils import to_request_id
