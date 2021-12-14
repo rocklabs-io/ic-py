@@ -1,3 +1,5 @@
+from _typeshed import Self
+from ic.candid import decode
 from math import trunc
 from typing import AbstractSet, Any, List, Sequence
 import leb128
@@ -32,6 +34,31 @@ class Types(Enum):
     Principal = -24
 
 prefix = "DIDL"
+
+class Pipe :
+    def __init__(self, buffer = b'', length = 0):
+        self._buffer = buffer
+        self._view = buffer[0:len(buffer)]
+
+    @property
+    def length(self):
+        return len(self._buffer)
+
+    def read(self, num:int):
+        if len(self._view) < num:
+            raise "Wrong: out of bound"
+        res = self._view[:num]
+        self._view = self._view[num:]
+        return res
+
+    def readbyte(self):
+        res = self._view[0]
+        self._view = self._view[1:]
+        return res
+
+
+
+
 
 class ConstructType: pass
 class TypeTable():
@@ -143,7 +170,8 @@ class EmptyClass(PrimitiveType):
     def decodeValue(self, b, t: Type):
         raise "Empty cannot appear as an output"
 
-    def __repr__(self) -> str:
+    @property
+    def name(self) -> str:
         return 'empty'
 
 class BoolClass(PrimitiveType):
@@ -163,7 +191,8 @@ class BoolClass(PrimitiveType):
         self.checkType(t)
         return True if leb128.u.decode(b) == 1 else False
 
-    def __repr__(self) -> str:
+    @property
+    def name(self) -> str:
         return 'bool'
 
 class NullClass(PrimitiveType):
@@ -183,7 +212,8 @@ class NullClass(PrimitiveType):
         self.checkType(t)
         return None
 
-    def __repr__(self) -> str:
+    @property
+    def name(self) -> str:
         return 'null'
 
 class ReservedClass(PrimitiveType):
@@ -205,7 +235,8 @@ class ReservedClass(PrimitiveType):
             t.decodeValue(b, t)
         return None
 
-    def __repr__(self) -> str:
+    @property
+    def name(self) -> str:
         return 'reserved'
 
 class Text(PrimitiveType):
@@ -228,7 +259,8 @@ class Text(PrimitiveType):
         length = leb128.i.decode(b)
         return b[:length].decode()
 
-    def __repr__(self) -> str:
+    @property
+    def name(self) -> str:
         return 'text'
 
 class IntClass(PrimitiveType):
@@ -248,7 +280,8 @@ class IntClass(PrimitiveType):
         self.checkType(t)
         return leb128.i.decode(b)
 
-    def __repr__(self) -> str:
+    @property
+    def name(self) -> str:
         return 'int'
 class NatClass(PrimitiveType):
     def __init__(self) -> None:
@@ -267,7 +300,8 @@ class NatClass(PrimitiveType):
         self.checkType(t)
         return leb128.i.decode(b)
 
-    def __repr__(self) -> str:
+    @property
+    def name(self) -> str:
         return 'nat'
 
 class PrincipalClass(PrimitiveType):
@@ -294,12 +328,44 @@ class PrincipalClass(PrimitiveType):
         self.checkType(t)
         return leb128.i.decode(b)
 
-    def __repr__(self) -> str:
+    @property
+    def name(self) -> str:
         return 'principal'       
+
+
+# through Pipe to decode bytes
+def safeRead(pipe: Pipe, num:int):
+    if pipe.length < num:
+        raise "unexpected end of buffer"
+    return pipe.read(num)
+
+def safeReadByte(pipe: Pipe):
+    if pipe.length < 1:
+        raise "unexpected end of buffer"
+    return pipe.read(1)
+
+def readTypeTable(pipe):
+    #types length
+    types = []
+    while True:
+        n = leb128.i.decode(safeReadByte(pipe))
+        if n > -1:
+            types.append[n]
+        else:
+            break
+    for _ in range(len(types)):
+
+
 
 # params = [{type, value}]
 # data = b'DIDL' + len(params) + encoded types + encoded values
-def encode(argTypes: List, args: List):
+def encode(params):
+    argTypes = []
+    args = []
+    for p in params:
+        argTypes.append(p['type'])
+        args.append(p['value'])
+    # argTypes: List, args: List
     if len(argTypes) != len(args):
         raise "Wrong number of message arguments"
     typetable = TypeTable()
@@ -315,7 +381,6 @@ def encode(argTypes: List, args: List):
     vals = b''
     for i in range(len(args)):
         t = argTypes[i]
-
         if not t.covariant(args[i]):
             raise "Invalid {} argument: {}".format(t.display(), str(args[i]))
         typs += t.encodeType(typetable)
@@ -324,18 +389,24 @@ def encode(argTypes: List, args: List):
 
 # data: b'DIDL\x00\x01q\x08XTC Test'
 def decode(data):
-    print('candid decode')
+    b = Pipe(data)
+
+    if len(data) < len(prefix):
+        raise "Message length smaller than prefix number"
+    prefix_buffer = safeRead(b, len(prefix)).decode()
+    if prefix_buffer != prefix:
+        raise "Wrong prefix:" + prefix_buffer + 'expected prefix: DIDL'
+
 
 
 if __name__ == "__main__":
     nat = NatClass()
-    res1 = encode([nat], [10000000000])
+    res1 = encode([{'type':nat, 'value':10000000000}])
     print('res1:'+ res1.hex())
 
     principal = PrincipalClass()
-    res2 = encode([principal], ['aaaaa-aa'])
+    res2 = encode([{'type': principal, 'value':'aaaaa-aa'}])
     print('res2' + res2.hex())
 
-    res = encode([principal, nat], ['aaaaa-aa', 10000000000])
+    res = encode([{'type': principal, 'value':'aaaaa-aa'},{'type':nat, 'value':10000000000}])
     print('res:' + res.hex())
-
