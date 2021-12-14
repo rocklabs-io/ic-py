@@ -10,7 +10,6 @@ ag = Agent(iden, client)
 
 # ret = ag.query_raw("gvbup-jyaaa-aaaah-qcdwa-cai", "totalSupply", encode([]))
 # ret = ag.query_raw("gvbup-jyaaa-aaaah-qcdwa-cai", "name", encode([]))
-'''
 ret = ag.query_raw(
         "gvbup-jyaaa-aaaah-qcdwa-cai",
         "balanceOf",
@@ -19,7 +18,6 @@ ret = ag.query_raw(
         ])
       )
 print(ret)
-'''
 
 ret = ag.update_raw(
         "gvbup-jyaaa-aaaah-qcdwa-cai",
