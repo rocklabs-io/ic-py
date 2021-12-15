@@ -1,5 +1,6 @@
 from typing import AbstractSet, Any, List, Sequence
 import leb128
+from struct import pack,unpack
 from abc import abstractclassmethod, ABCMeta
 from enum import Enum
 import math
@@ -33,6 +34,7 @@ class Types(Enum):
 
 prefix = "DIDL"
 
+# todo
 class Pipe :
     def __init__(self, buffer = b'', length = 0):
         self._buffer = buffer
@@ -135,7 +137,6 @@ class Type(metaclass=ABCMeta):
 
     @abstractclassmethod
     def _buildTypeTableImpl(): pass
-
 
 class PrimitiveType(Type):
     def __init__(self) -> None:
@@ -332,7 +333,6 @@ class NatClass(PrimitiveType):
         return 'nat'
 
 # Represents an IDL Float
-# todo
 class FloatClass(PrimitiveType):
     def __init__(self, _bits):
         super().__init__()
@@ -344,38 +344,79 @@ class FloatClass(PrimitiveType):
         return isinstance(x, float)
     
     def encodeValue(self, val):
-        pass
+        if self._bits == 32:
+            buf = pack('f', val)
+        elif self._bits == 64:
+            buf = pack('d', val)
+        else:
+            raise "The length of float have to be 32 bits or 64 bits "
+        return buf
 
     def encodeType(self):
         opcode = Types.Float32.value if self._bits == 32 else Types.Float64.value
         return leb128.i.encode(opcode)
 
-    def decodeValue(self, b: Pipe, t: Type):
-        pass
+    def decodeValue(self, b: Pipe, t: Type) -> float:
+        self.checkType(t)
+        by = safeRead(b, self._bits // 8)
+        if self._bits == 32:
+            return  unpack('f', by)[0]
+        elif self._bits == 64:
+            return unpack('d', by)[0]
+        else:
+            raise "The length of float have to be 32 bits or 64 bits "
 
     @property
     def name(self) -> str:
         return 'float' + str(self._bits)
 
 # Represents an IDL fixed-width Int(n)
-# todo
 class FixedIntClass(PrimitiveType):
     def __init__(self, _bits):
         super().__init__()
         self._bits = _bits
+        if _bits != 8 and _bits != 16 and \
+           _bits != 32 and _bits != 64 :
+           raise "bits only support 8, 16, 32, 64"
 
     def covariant(self, x):
-        pass
+        minVal = -1 * 2 ** (self._bits - 1) 
+        maxVal = -1 + 2 ** (self._bits - 1) 
+        if x >= minVal and x <= maxVal:
+            return True
+        else:
+            return False
     
     def encodeValue(self, val):
-        pass
+        if self._bits == 8:
+            buf = pack('b', val) # signed char
+        elif self._bits == 16:
+            buf = pack('h', val) # short
+        elif self._bits == 32:
+            buf = pack('i', val) # int
+        elif self._bits == 64:
+            buf = pack('q', val) # long long
+        else:
+            raise "bits only support 8, 16, 32, 64"
+        return buf
 
     def encodeType(self):
-        offset = math.log2(self._bits) -3
+        offset = int(math.log2(self._bits) - 3)
         return leb128.i.encode(-9 - offset)
 
     def decodeValue(self, b: Pipe, t: Type):
-        pass
+        self.checkType(t)
+        by = safeRead(b, self._bits // 8) 
+        if self._bits == 8:
+            return unpack('b', by)[0] # signed char
+        elif self._bits == 16:
+            return unpack('h', by)[0] # short
+        elif self._bits == 32:
+            return unpack('i', by) # int
+        elif self._bits == 64:
+            return unpack('q', by) # long long
+        else:
+            raise "bits only support 8, 16, 32, 64"
 
     @property
     def name(self) -> str:
@@ -383,51 +424,93 @@ class FixedIntClass(PrimitiveType):
 
 
 # Represents an IDL fixed-width Nat(n)
-# todo
 class FixedNatClass(PrimitiveType):
     def __init__(self, _bits):
         super().__init__()
         self._bits = _bits
+        if _bits != 8 and _bits != 16 and \
+           _bits != 32 and _bits != 64 :
+           raise "bits only support 8, 16, 32, 64"
 
     def covariant(self, x):
-        pass
+        maxVal = -1 + 2 ** self._bits
+        if x >= 0 and x <= maxVal:
+            return True
+        else:
+            return False
     
     def encodeValue(self, val):
-        pass
+        if self._bits == 8:
+            buf = pack('B', val) # unsigned char
+        elif self._bits == 16:
+            buf = pack('H', val) # unsigned short
+        elif self._bits == 32:
+            buf = pack('I', val) # unsigned int
+        elif self._bits == 64:
+            buf = pack('Q', val) # unsigned long long
+        else:
+            raise "bits only support 8, 16, 32, 64"
+        return buf
 
     def encodeType(self):
-        offset = math.log2(self._bits) -3
+        offset = int(math.log2(self._bits) - 3)
         return leb128.i.encode(-5 - offset)
 
     def decodeValue(self, b: Pipe, t: Type):
-        pass
+        self.checkType(t)
+        by = safeRead(b, self._bits // 8) 
+        if self._bits == 8:
+            return unpack('B', by)[0] # unsigned char
+        elif self._bits == 16:
+            return unpack('H', by)[0] # unsigned short
+        elif self._bits == 32:
+            return unpack('I', by) # unsigned int
+        elif self._bits == 64:
+            return unpack('Q', by) # unsigned long long
+        else:
+            raise "bits only support 8, 16, 32, 64"
 
     @property
     def name(self) -> str:
         return 'nat' + str(self._bits)
 
 # Represents an IDL Array
-# todo
 class VecClass(ConstructType):
     def __init__(self, _type: Type):
         super().__init__()
         self._type = _type
+        # If true, this vector is really a blob and we can just use memcpy.
         self._blobOptimization = False
         if isinstance(_type, FixedNatClass) and _type._bits == 8:
             self._blobOptimization = True
 
     def covariant(self, x):
-        pass
+        return type(x) == list and not False in list(map(self._type.covariant, x))
     
     def encodeValue(self, val):
-        pass
-
+        length = leb128.u.encode(len(val))
+        if self._blobOptimization:
+            return length + b''.join(val)
+        vec = list(map(self._type.encodeValue, val))
+        return length + b''.join(vec)
+        
     def _buildTypeTableImpl(self, typeTable: TypeTable):
-        pass
-
+        self._type.buildTypeTable(typeTable)
+        opCode = leb128.u.encode(Types.Vec)
+        buffer = self._type.encodeType(typeTable)
+        typeTable.add(self, opCode + buffer)
 
     def decodeValue(self, b: Pipe, t: Type):
-        pass
+        vec = self.checkType(t)
+        if not isinstance(vec, VecClass):
+            raise "Not a vector type"
+        length = lenDecode(b)
+        if self._blobOptimization:
+            return b.read(length)
+        rets = []
+        for _ in range(length):
+            rets.append(self._type.decodeValue(b, vec._type))
+        return rets
 
     @property
     def name(self) -> str:
@@ -437,25 +520,36 @@ class VecClass(ConstructType):
         return 'vec {}'.format(self._type.display())
 
 # Represents an IDL Option
-# todo
 class OptClass(ConstructType):
     def __init__(self, _type: Type):
         super().__init__()
         self._type = _type
 
-
     def covariant(self, x):
-        pass
+        return type(x) == list and (len(x) == 0 | (len(x) == 1 and self._type.covariant(x[0])))
     
     def encodeValue(self, val):
-        pass
+        if len(val) == 0:
+            return b'\x00'
+        else:
+            return b'\x01' + self._type.encodeValue(val[0])
 
     def _buildTypeTableImpl(self, typeTable: TypeTable):
-        pass
-
+        self._type.buildTypeTable(typeTable)
+        opCode = leb128.u.encode(Types.Opt)
+        buffer = self._type.encodeType(typeTable)
+        typeTable.add(self, opCode + buffer)
 
     def decodeValue(self, b: Pipe, t: Type):
-        pass
+        opt = self.checkType(t)
+        if not isinstance(opt, OptClass):
+            raise "Not an option type"
+        if safeReadByte(b) == b'\x00':
+            return []
+        elif safeReadByte(b) == b'\x01':
+            return [self._type.decodeValue(b, opt._type)]
+        else:
+            raise "Not an option value"
 
     @property
     def name(self) -> str:
@@ -466,7 +560,7 @@ class OptClass(ConstructType):
 
 # Represents an IDL Record
 # todo
-class OptClass(ConstructType):
+class RecordClass(ConstructType):
     def __init__(self, filed):
         super().__init__()
         self._fields = []
@@ -605,7 +699,14 @@ class PrincipalClass(PrimitiveType):
         super().__init__()
 
     def covariant(self, x):
-        return True
+        if isinstance(x,str):
+            p = P.from_str(x)
+        elif isinstance(x, bytes):
+            p = P.from_hex(x.hex())
+        else:
+            raise "only support string or bytes format"
+        return p.isPrincipal
+
     
     def encodeValue(self, val):
         tag = int.to_bytes(1, 1, byteorder='big')
@@ -795,4 +896,3 @@ if __name__ == "__main__":
     print('decode data: {}'.format(data))
     out = decode(data)
     print(out)
-

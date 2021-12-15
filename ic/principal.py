@@ -23,6 +23,7 @@ class Principal:
         self._len = len(bytes) 
         self._bytes = bytes 
         self.hex = str(self._bytes.hex()).upper()
+        self._isPrincipal = True
         
     @staticmethod
     def management_canister():
@@ -47,6 +48,10 @@ class Principal:
     @property
     def bytes(self):
         return self._bytes
+    
+    @property
+    def isPrincipal(self):
+        return self._isPrincipal
 
     @staticmethod
     def from_str(s): 
