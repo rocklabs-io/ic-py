@@ -5,7 +5,7 @@ from .identity import *
 from .constants import *
 from .utils import to_request_id
 from .certificate import lookup
-# python agent class
+
 
 def sign_request(req, iden):
     req_id = to_request_id(req)
@@ -16,7 +16,6 @@ def sign_request(req, iden):
         'sender_pubkey': sig[0],
         'sender_sig': sig[1]
     }
-    # print(req_id, envelop, cbor2.dumps(envelop))
     return req_id, cbor2.dumps(envelop)
 
 class Agent:
@@ -35,7 +34,6 @@ class Agent:
 
     def query_endpoint(self, canister_id, data):
         ret = self.client.query(canister_id, data)
-        # print(ret)
         return cbor2.loads(ret)
 
     def call_endpoint(self, canister_id, request_id, data):
@@ -77,7 +75,6 @@ class Agent:
         print('update.req_id:', req_id.hex())
         # poll req_id status to get result
         result = self.poll(canister_id, req_id)
-        # print(result)
         return result
 
     def read_state_raw(self, canister_id, paths):
@@ -91,7 +88,6 @@ class Agent:
         ret = self.read_state_endpoint(canister_id, data)
         d = cbor2.loads(ret)
         cert = cbor2.loads(d['certificate'])
-        # print('cert:', cert)
         return cert
 
     def request_status_raw(self, canister_id, req_id):
@@ -106,5 +102,5 @@ class Agent:
         return decode('DIDL\x00\x01\x7c'.encode() + val)
 
     def poll(self, canister_id, req_id):
+        # TODO: loop query req_id status until get result
         return self.request_status_raw(canister_id, req_id)
-
