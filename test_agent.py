@@ -1,7 +1,9 @@
 from ic.agent import *
 from ic.identity import *
 from ic.client import *
-from ic.candid import Types, encode
+# from ic.candid import Types, encode
+from ic.candid import Interface_IDL as Types, encode
+# >>>>>>> fe0d2c53dafa1e80216aa54331a230a2e482916b
 
 client = Client()
 iden = Identity(privkey="833fe62409237b9d62ec77587520911e9a759cec1d19755b7da901b96dca3d42")
