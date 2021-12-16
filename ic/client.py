@@ -10,7 +10,7 @@ class Client:
         endpoint = self.url + '/api/v2/canister/' + canister_id + '/query'
         headers = {'Content-Type': 'application/cbor'}
         ret = requests.post(endpoint, data, headers=headers)
-        return ret.text
+        return ret.content
 
     def call(self, canister_id, req_id, data):
         endpoint = self.url + '/api/v2/canister/' + canister_id + '/call'
@@ -22,10 +22,10 @@ class Client:
         endpoint = self.url + '/api/v2/canister/' + canister_id + '/read_state'
         headers = {'Content-Type': 'application/cbor'}
         ret = requests.post(endpoint, data, headers=headers)
-        return ret.text
+        return ret.content
 
     def status(self):
         endpoint = self.url + '/api/v2/status'
         ret = requests.get(endpoint)
         print('client.status:', ret.text)
-        return ret.text
+        return ret.content

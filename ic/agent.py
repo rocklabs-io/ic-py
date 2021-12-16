@@ -4,7 +4,7 @@ from .candid import decode
 from .identity import *
 from .constants import *
 from .utils import to_request_id
-
+from .certificate import lookup
 # python agent class
 
 def sign_request(req, iden):
@@ -35,12 +35,7 @@ class Agent:
 
     def query_endpoint(self, canister_id, data):
         ret = self.client.query(canister_id, data)
-        # print(ret.encode())
-        # remove tag 2 or tag 3 encode. 
-        ret = ret.encode()[7:] # the 7 bytes header may be length info.
-        if b'\xc2' or b'\xc3' in ret:
-            ret = ret.replace(b'\xc2', b'')
-            ret = ret.replace(b'\xc3', b'') 
+        # print(ret)
         return cbor2.loads(ret)
 
     def call_endpoint(self, canister_id, request_id, data):
@@ -82,7 +77,8 @@ class Agent:
         print('update.req_id:', req_id.hex())
         # poll req_id status to get result
         result = self.poll(canister_id, req_id)
-        print(result)
+        # print(result)
+        return result
 
     def read_state_raw(self, canister_id, paths):
         req = {
@@ -93,20 +89,22 @@ class Agent:
         }
         _, data = sign_request(req, self.identity)
         ret = self.read_state_endpoint(canister_id, data)
-        d = cbor2.loads(ret.encode()[7:])
-        # TODO: fix cert loads
+        d = cbor2.loads(ret)
         cert = cbor2.loads(d['certificate'])
-        print('cert:', cert)
+        # print('cert:', cert)
         return cert
 
     def request_status_raw(self, canister_id, req_id):
         paths = [
-            ['request_status'.encode(), req_id]
+            # ['request_status'.encode(), req_id]
+            ['time'.encode()]
         ]
         cert = self.read_state_raw(canister_id, paths)
-        # TODO: extract request status from cert
-        lookup_request_status(cert, req_id)
+        val = lookup(paths[0], cert)
+        # print(val)
+        # time type is Nat, so plus prefix "DIDL\x00\x01\x7d"
+        return decode('DIDL\x00\x01\x7d'.encode() + val)
 
     def poll(self, canister_id, req_id):
-        ret = self.request_status_raw(canister_id, req_id)
-        return ret
+        return self.request_status_raw(canister_id, req_id)
+

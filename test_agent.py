@@ -24,7 +24,7 @@ ret = ag.query_raw(
             {'type': Types.Principal, 'value': iden.sender().bytes}
         ])
       )
-print('balanceOf', ret)
+print('balanceOf:', ret)
 
 # transfer 100 tokens to blackhole
 ret = ag.update_raw(
@@ -35,4 +35,4 @@ ret = ag.update_raw(
             {'type': Types.Nat, 'value': 10000000000}
             ])
         )
-print(ret)
+print('call time: ', ret)
