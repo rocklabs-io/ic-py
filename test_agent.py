@@ -7,11 +7,13 @@ from ic.candid import Interface_IDL as Types, encode
 
 client = Client()
 iden = Identity(privkey="833fe62409237b9d62ec77587520911e9a759cec1d19755b7da901b96dca3d42")
-print(Principal.self_authenticating(iden.der_pubkey))
+print('principal:', Principal.self_authenticating(iden.der_pubkey))
 ag = Agent(iden, client)
 
-# ret = ag.query_raw("gvbup-jyaaa-aaaah-qcdwa-cai", "totalSupply", encode([]))
-# ret = ag.query_raw("gvbup-jyaaa-aaaah-qcdwa-cai", "name", encode([]))
+ret = ag.query_raw("gvbup-jyaaa-aaaah-qcdwa-cai", "totalSupply", encode([]))
+print('totalSupply:', ret)
+ret = ag.query_raw("gvbup-jyaaa-aaaah-qcdwa-cai", "name", encode([]))
+print('name:', ret)
 ret = ag.query_raw(
         "gvbup-jyaaa-aaaah-qcdwa-cai",
         "balanceOf",
@@ -19,8 +21,9 @@ ret = ag.query_raw(
             {'type': Types.Principal, 'value': iden.sender().bytes}
         ])
       )
-print(ret)
+print('balanceOf', ret)
 
+'''
 ret = ag.update_raw(
         "gvbup-jyaaa-aaaah-qcdwa-cai",
         "transfer",
@@ -30,3 +33,4 @@ ret = ag.update_raw(
             ])
         )
 print(ret)
+'''

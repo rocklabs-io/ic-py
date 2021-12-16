@@ -857,9 +857,13 @@ def decode(data):
     rawTable, rawTypes = readTypeTable(b)
     # todo parse rawTable
     types = map(getType, rawTypes)
-    outputs = {}
+    outputs = []
     for i in types:
-        outputs[i.name] = i.decodeValue(b, i)
+        # outputs[i.name] = i.decodeValue(b, i)
+        outputs.append({
+            'type': i.name,
+            'value': i.decodeValue(b, i)
+            })
     return outputs
 
 class Interface_IDL():

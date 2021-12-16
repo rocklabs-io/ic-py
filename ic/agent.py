@@ -55,7 +55,6 @@ class Agent:
         return result
 
     def query_raw(self, canister_id, method_name, arg):
-        print(arg)
         req = {
             'request_type': "query",
             'sender': self.identity.sender().bytes,
@@ -66,7 +65,6 @@ class Agent:
         }
         _, data = sign_request(req, self.identity)
         result = self.query_endpoint(canister_id, data)
-        print(result)
         if result['status'] == 'replied':
             arg = decode(result['reply']['arg'])
             return arg
