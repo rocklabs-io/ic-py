@@ -79,6 +79,7 @@ class Agent:
         }
         req_id, data = sign_request(req, self.identity)
         _ = self.call_endpoint(canister_id, req_id, data)
+        print('update.req_id:', req_id.hex())
         # poll req_id status to get result
         result = self.poll(canister_id, req_id)
         print(result)

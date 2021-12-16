@@ -6,7 +6,7 @@ from enum import Enum
 import math
 from .principal import Principal as P
 
-class Types(Enum):
+class TypeIds(Enum):
     Null = -1
     Bool = -2
     Nat = -3
@@ -179,7 +179,7 @@ class EmptyClass(PrimitiveType):
         raise "Empty cannot appear as a function argument"
 
     def encodeType(self):
-        return leb128.i.encode(Types.Empty.value)
+        return leb128.i.encode(TypeIds.Empty.value)
 
     def decodeValue(self):
         raise "Empty cannot appear as an output"
@@ -187,6 +187,10 @@ class EmptyClass(PrimitiveType):
     @property
     def name(self) -> str:
         return 'empty'
+
+    @property
+    def id(self) -> int:
+        return TypeIds.Empty.value
 
 # Represents an IDL Bool
 class BoolClass(PrimitiveType):
@@ -200,7 +204,7 @@ class BoolClass(PrimitiveType):
         return leb128.u.encode(1 if val else 0)
 
     def encodeType(self):
-        return leb128.i.encode(Types.Bool.value)
+        return leb128.i.encode(TypeIds.Bool.value)
 
     def decodeValue(self, b: Pipe, t: Type):
         self.checkType(t)
@@ -216,6 +220,10 @@ class BoolClass(PrimitiveType):
     def name(self) -> str:
         return 'bool'
 
+    @property
+    def id(self) -> int:
+        return TypeIds.Bool.value
+
 # Represents an IDL Null
 # check None == Null ?
 class NullClass(PrimitiveType):
@@ -229,7 +237,7 @@ class NullClass(PrimitiveType):
         return b''
 
     def encodeType(self):
-        return leb128.i.encode(Types.Null.value)
+        return leb128.i.encode(TypeIds.Null.value)
 
     def decodeValue(self, t: Type):
         self.checkType(t)
@@ -238,6 +246,10 @@ class NullClass(PrimitiveType):
     @property
     def name(self) -> str:
         return 'null'
+
+    @property
+    def id(self) -> int:
+        return TypeIds.Null.value
 
 # Represents an IDL Reserved
 class ReservedClass(PrimitiveType):
@@ -251,7 +263,7 @@ class ReservedClass(PrimitiveType):
         return b''
 
     def encodeType(self):
-        return leb128.i.encode(Types.Reserved.value)
+        return leb128.i.encode(TypeIds.Reserved.value)
 
     def decodeValue(self, b: Pipe, t: Type):
         if self._name != t._name:
@@ -261,6 +273,10 @@ class ReservedClass(PrimitiveType):
     @property
     def name(self) -> str:
         return 'reserved'
+
+    @property
+    def id(self) -> int:
+        return TypeIds.Reserved.value
 
 # Represents an IDL Text
 class TextClass(PrimitiveType):
@@ -276,7 +292,7 @@ class TextClass(PrimitiveType):
         return  buf + length
 
     def encodeType(self):
-        return leb128.i.encode(Types.Text.value)
+        return leb128.i.encode(TypeIds.Text.value)
 
     def decodeValue(self, b, t: Type):
         self.checkType(t)
@@ -287,6 +303,10 @@ class TextClass(PrimitiveType):
     @property
     def name(self) -> str:
         return 'text'
+
+    @property
+    def id(self) -> int:
+        return TypeIds.Text.value
 
 # Represents an IDL Int
 class IntClass(PrimitiveType):
@@ -300,7 +320,7 @@ class IntClass(PrimitiveType):
         return leb128.i.encode(val)
 
     def encodeType(self):
-        return leb128.i.encode(Types.Int.value)
+        return leb128.i.encode(TypeIds.Int.value)
 
     def decodeValue(self, b: Pipe, t: Type):
         self.checkType(t)
@@ -309,6 +329,10 @@ class IntClass(PrimitiveType):
     @property
     def name(self) -> str:
         return 'int'
+
+    @property
+    def id(self) -> int:
+        return TypeIds.Int.value
 
 # Represents an IDL Nat
 class NatClass(PrimitiveType):
@@ -322,7 +346,7 @@ class NatClass(PrimitiveType):
         return leb128.u.encode(val)
 
     def encodeType(self):
-        return leb128.i.encode(Types.Nat.value)
+        return leb128.i.encode(TypeIds.Nat.value)
 
     def decodeValue(self, b: Pipe, t: Type):
         self.checkType(t)
@@ -331,6 +355,10 @@ class NatClass(PrimitiveType):
     @property
     def name(self) -> str:
         return 'nat'
+
+    @property
+    def id(self) -> int:
+        return TypeIds.Nat.value
 
 # Represents an IDL Float
 class FloatClass(PrimitiveType):
@@ -353,7 +381,7 @@ class FloatClass(PrimitiveType):
         return buf
 
     def encodeType(self):
-        opcode = Types.Float32.value if self._bits == 32 else Types.Float64.value
+        opcode = TypeIds.Float32.value if self._bits == 32 else TypeIds.Float64.value
         return leb128.i.encode(opcode)
 
     def decodeValue(self, b: Pipe, t: Type) -> float:
@@ -369,6 +397,10 @@ class FloatClass(PrimitiveType):
     @property
     def name(self) -> str:
         return 'float' + str(self._bits)
+
+    @property
+    def id(self) -> int:
+        return TypeIds.Float32.value if self._bits == 32 else TypeIds.Float64.value
 
 # Represents an IDL fixed-width Int(n)
 class FixedIntClass(PrimitiveType):
@@ -422,6 +454,16 @@ class FixedIntClass(PrimitiveType):
     def name(self) -> str:
         return 'int' + str(self._bits)
 
+    @property
+    def id(self) -> int:
+        if self._bits == 8:
+            return TypeIds.Int8.value
+        if self._bits == 16:
+            return TypeIds.Int16.value
+        if self._bits == 32:
+            return TypeIds.Int32.value
+        if self._bits == 64:
+            return TypeIds.Int64.value
 
 # Represents an IDL fixed-width Nat(n)
 class FixedNatClass(PrimitiveType):
@@ -474,6 +516,17 @@ class FixedNatClass(PrimitiveType):
     def name(self) -> str:
         return 'nat' + str(self._bits)
 
+    @property
+    def id(self) -> int:
+        if self._bits == 8:
+            return TypeIds.Nat8.value
+        if self._bits == 16:
+            return TypeIds.Nat16.value
+        if self._bits == 32:
+            return TypeIds.Nat32.value
+        if self._bits == 64:
+            return TypeIds.Nat64.value
+
 # Represents an IDL Array
 class VecClass(ConstructType):
     def __init__(self, _type: Type):
@@ -496,7 +549,7 @@ class VecClass(ConstructType):
         
     def _buildTypeTableImpl(self, typeTable: TypeTable):
         self._type.buildTypeTable(typeTable)
-        opCode = leb128.u.encode(Types.Vec)
+        opCode = leb128.u.encode(TypeIds.Vec)
         buffer = self._type.encodeType(typeTable)
         typeTable.add(self, opCode + buffer)
 
@@ -515,6 +568,10 @@ class VecClass(ConstructType):
     @property
     def name(self) -> str:
         return 'vec' + str(self._type.name)
+
+    @property
+    def id(self) -> int:
+        return TypeIds.Vec.value
 
     def display(self):
         return 'vec {}'.format(self._type.display())
@@ -536,7 +593,7 @@ class OptClass(ConstructType):
 
     def _buildTypeTableImpl(self, typeTable: TypeTable):
         self._type.buildTypeTable(typeTable)
-        opCode = leb128.u.encode(Types.Opt)
+        opCode = leb128.u.encode(TypeIds.Opt)
         buffer = self._type.encodeType(typeTable)
         typeTable.add(self, opCode + buffer)
 
@@ -554,6 +611,10 @@ class OptClass(ConstructType):
     @property
     def name(self) -> str:
         return 'opt' + str(self._type.name)
+
+    @property
+    def id(self) -> int:
+        return TypeIds.Opt.value
 
     def display(self):
         return 'opt {}'.format(self._type.display())
@@ -586,6 +647,10 @@ class RecordClass(ConstructType):
     def name(self) -> str:
         pass
 
+    @property
+    def id(self) -> int:
+        return TypeIds.Record.value
+
     def display(self):
         pass
 
@@ -614,6 +679,10 @@ class TupleClass(ConstructType):
     def name(self) -> str:
         pass
 
+    @property
+    def id(self) -> int:
+        return TypeIds.Tuple.value
+
     def display(self):
         pass
 
@@ -641,6 +710,10 @@ class VariantClass(ConstructType):
     @property
     def name(self) -> str:
         pass
+
+    @property
+    def id(self) -> int:
+        return TypeIds.Variant.value
 
     def display(self):
         pass
@@ -720,7 +793,7 @@ class PrincipalClass(PrimitiveType):
         return tag + l + buf
 
     def encodeType(self):
-        return leb128.i.encode(Types.Principal.value)
+        return leb128.i.encode(TypeIds.Principal.value)
 
     def decodeValue(self, b: Pipe, t: Type):
         self.checkType(t)
@@ -733,6 +806,10 @@ class PrincipalClass(PrimitiveType):
     @property
     def name(self) -> str:
         return 'principal'       
+
+    @property
+    def id(self) -> int:
+        return TypeIds.Principal.value
 
 
 # through Pipe to decode bytes
@@ -773,7 +850,7 @@ def readTypeTable(pipe):
 
 # todo
 def getType(t:int) -> Type :
-    idl = Interface_IDL()
+    idl = Types()
     if t < -24: 
         raise "not supported type"
     if   t == -1:
@@ -866,7 +943,7 @@ def decode(data):
             })
     return outputs
 
-class Interface_IDL():
+class Types():
     Null = NullClass()
     Empty = EmptyClass()
     Bool = BoolClass()
