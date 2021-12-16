@@ -33,9 +33,6 @@ class Agent:
     def get_expiry_date(self):
         return int(time.time() + self.ingress_expiry) * 10**9
 
-    def read_state(self):
-        pass
-
     def query_endpoint(self, canister_id, data):
         ret = self.client.query(canister_id, data)
         # print(ret.encode())
@@ -83,23 +80,30 @@ class Agent:
         req_id, data = sign_request(req, self.identity)
         _ = self.call_endpoint(canister_id, req_id, data)
         # poll req_id status to get result
-        # result = self.poll(canister_id, req_id)
-        # print(result)
+        result = self.poll(canister_id, req_id)
+        print(result)
 
     def read_state_raw(self, canister_id, paths):
         req = {
+            'request_type': 'read_state',
             'sender': self.identity.sender().bytes,
             'paths': paths, 
             'ingress_expiry': self.get_expiry_date(),
         }
         _, data = sign_request(req, self.identity)
         ret = self.read_state_endpoint(canister_id, data)
-        cert = cbor2.loads(ret)
+        d = cbor2.loads(ret.encode()[7:])
+        # TODO: fix cert loads
+        cert = cbor2.loads(d['certificate'])
+        print('cert:', cert)
         return cert
 
     def request_status_raw(self, canister_id, req_id):
-        paths = []
+        paths = [
+            ['request_status'.encode(), req_id]
+        ]
         cert = self.read_state_raw(canister_id, paths)
+        # TODO: extract request status from cert
         lookup_request_status(cert, req_id)
 
     def poll(self, canister_id, req_id):

@@ -16,18 +16,16 @@ class Client:
         endpoint = self.url + '/api/v2/canister/' + canister_id + '/call'
         headers = {'Content-Type': 'application/cbor'}
         ret = requests.post(endpoint, data, headers=headers)
-        print(ret.text)
         return req_id
 
     def read_state(self, canister_id, data):
         endpoint = self.url + '/api/v2/canister/' + canister_id + '/read_state'
         headers = {'Content-Type': 'application/cbor'}
         ret = requests.post(endpoint, data, headers=headers)
-        print(ret.text)
         return ret.text
 
     def status(self):
         endpoint = self.url + '/api/v2/status'
         ret = requests.get(endpoint)
-        print(ret.text)
+        print('client.status:', ret.text)
         return ret.text
