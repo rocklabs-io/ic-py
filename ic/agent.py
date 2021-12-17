@@ -1,6 +1,6 @@
 import time
 import cbor2
-from .candid import decode
+from .candid import Types, decode, encode
 from .identity import *
 from .constants import *
 from .utils import to_request_id
@@ -99,6 +99,7 @@ class Agent:
         val = lookup(paths[0], cert)
         # print(val)
         # time type is Int, so plus prefix "DIDL\x00\x01\x7c"
+        print(encode([{'type': Types.Int}]))
         return decode('DIDL\x00\x01\x7c'.encode() + val)
 
     def poll(self, canister_id, req_id):

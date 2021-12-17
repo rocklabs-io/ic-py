@@ -14,6 +14,15 @@ def encode_list(l):
         ret += hashlib.sha256(v).digest()
     return ret
 
+# used for sort record by key
+def labelHash(s:str) -> int:
+    #TODO input regulatization
+    h = 0
+    for c in s.encode():
+        h = (h * 223 + c) % 2 ** 32
+    return h
+
+
 def to_request_id(d):
     if not isinstance(d, dict):
         print(d)
