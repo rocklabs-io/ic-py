@@ -765,6 +765,7 @@ class VariantClass(ConstructType):
     def __init__(self, field):
         super().__init__()
         self._fields = dict(sorted(field.items(), key=lambda kv: labelHash(kv[0]))) # check
+        print(self._fields)
         
 
     def covariant(self, x):
@@ -801,7 +802,7 @@ class VariantClass(ConstructType):
 
     def decodeValue(self, b: Pipe, t: Type):
         variant = self.checkType(t)
-        if isinstance(variant, VariantClass):
+        if not isinstance(variant, VariantClass):
             raise "Not a variant type"
         idx = lenDecode(b)
         if idx >= len(variant._fields):
@@ -993,7 +994,7 @@ def readTypeTable(pipe):
     return typeTable, rawList
 
 # todo
-def getType(t:int) -> Type :
+def getType(rawTable, table, t:int) -> Type :
     idl = Types()
     if t < -24: 
         raise "not supported type"
@@ -1036,7 +1037,9 @@ def getType(t:int) -> Type :
             return idl.Principal
         else:
             raise "Illegal op_code:{}".format(t)
-    return None
+    if t >= len(rawTable):
+        raise "type index out of range" 
+    return table[t]
 
 
 def buildType(rawTable, table, entry):
@@ -1077,7 +1080,7 @@ def buildType(rawTable, table, entry):
             name = '_' + str(hash)
             if t >= len(rawTable):
                 raise "type index out of range"
-            temp = getType(t)
+            temp = getType(rawTable, table, t)
             if temp == None:
                 temp = table[t]
             fields[name] = temp
@@ -1131,13 +1134,15 @@ def decode(data):
     if prefix_buffer != prefix:
         raise "Wrong prefix:" + prefix_buffer + 'expected prefix: DIDL'
     rawTable, rawTypes = readTypeTable(b)
-    table = map(Types.Rec, rawTable)
+    table = [Types.Rec] * len(rawTable)
 
     for i, entry in enumerate(rawTable):
         t = buildType(rawTable, table, entry)
         table[i].fill(t)
 
-    types = list(map(getType, rawTypes))
+    types = []
+    for t in rawTypes:
+        types.append(getType(rawTable, table, t))
     outputs = []
     for i in types:
         # outputs[i.name] = i.decodeValue(b, i)
@@ -1211,10 +1216,10 @@ if __name__ == "__main__":
     # out = decode(data)
     # print(out)
 
-    # data = b'DIDL\x00\x01}\xe2\x82\xac\xe2\x82\xac\xe2\x80'
-    # print('decode data: {}'.format(data))
-    # out = decode(data)
-    # print(out)
+    data = b'DIDL\x00\x01}\xe2\x82\xac\xe2\x82\xac\xe2\x80'
+    print('decode data: {}'.format(data))
+    out = decode(data)
+    print(out)
 
     # record
     # record = Types.Record({'foo':Types.Text, 'bar': Types.Int})
