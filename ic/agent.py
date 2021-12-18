@@ -28,7 +28,7 @@ def getType(method:str):
     elif method == 'balanceOf':
         return Types.Nat
     elif method == 'transfer':
-        return Types.Tuple(Types.Variant)
+        return Types.Nat
     else:
         pass
 
@@ -90,7 +90,8 @@ class Agent:
         print('update.req_id:', req_id.hex())
         # poll req_id status to get result
         result = self.poll(canister_id, req_id)
-        return result
+        method_type = getType(method_name)
+        return decode(method_type, result)
 
     def read_state_raw(self, canister_id, paths):
         req = {

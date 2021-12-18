@@ -27,12 +27,12 @@ ret = ag.query_raw(
 print('balanceOf:', ret)
 
 # transfer 100 tokens to blackhole
-# ret = ag.update_raw(
-#         "gvbup-jyaaa-aaaah-qcdwa-cai",
-#         "transfer",
-#         encode([
-#             {'type': Types.Principal, 'value': 'aaaaa-aa'},
-#             {'type': Types.Nat, 'value': 10000000000}
-#             ])
-#         )
-# print('result: ', ret)
+ret = ag.update_raw(
+        "gvbup-jyaaa-aaaah-qcdwa-cai",
+        "transfer",
+        encode([
+            {'type': Types.Principal, 'value': 'aaaaa-aa'},
+            {'type': Types.Nat, 'value': 10000000000}
+            ])
+        )
+print('result: ', ret)
