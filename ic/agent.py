@@ -1,5 +1,6 @@
 import time
 import cbor2
+from waiter import wait
 from .candid import decode
 from .identity import *
 from .constants import *
@@ -92,15 +93,26 @@ class Agent:
 
     def request_status_raw(self, canister_id, req_id):
         paths = [
-            # ['request_status'.encode(), req_id]
-            ['time'.encode()]
+            ['request_status'.encode(), req_id],
         ]
         cert = self.read_state_raw(canister_id, paths)
-        val = lookup(paths[0], cert)
-        # print(val)
-        # time type is Int, so plus prefix "DIDL\x00\x01\x7c"
-        return decode('DIDL\x00\x01\x7c'.encode() + val)
+        #print(cert)
+        status = lookup(['request_status'.encode(), req_id, 'status'.encode()], cert)
+        if (status == None):
+            return status, cert
+        else:
+            return status.decode(), cert
 
-    def poll(self, canister_id, req_id):
-        # TODO: loop query req_id status until get result
-        return self.request_status_raw(canister_id, req_id)
+    def poll(self, canister_id, req_id, delay=1, timeout=10):
+        status = None
+        for _ in wait(delay, timeout):
+            status, cert = self.request_status_raw(canister_id, req_id)
+            if status == 'replied' or status == 'done' or status  == 'rejected':
+                break
+        
+        if status == 'replied':
+            path = ['request_status'.encode(), req_id, 'reply'.encode()]
+            res = lookup(path, cert)
+            return res
+        else:
+            return status
