@@ -35,4 +35,4 @@ ret = ag.update_raw(
             {'type': Types.Nat, 'value': 10000000000}
             ])
         )
-print('call time: ', ret)
+print('result: ', ret)

@@ -16,7 +16,7 @@ setup(
     author = 'Rocklabs',
     author_email = 'ccyanxyz@gmail.com',
     keywords = 'dfinity ic agent',
-    install_requires = ['requests>=2.22.0', 'cryptography>=36.0.0', 'cbor2>=5.4.2'],
+    install_requires = ['requests>=2.22.0', 'cryptography>=36.0.0', 'cbor2>=5.4.2', 'leb128>=1.0.4', 'waiter>=1.2'],
     py_modules = ['ic'],
     package_dir = { 'ic': "ic" },
     packages = setuptools.find_packages(where='./'),
