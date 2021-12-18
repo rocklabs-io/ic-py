@@ -7,8 +7,8 @@ from struct import pack,unpack
 from abc import abstractclassmethod, ABCMeta
 from enum import Enum
 import math
-from .principal import Principal as P
-from .utils import labelHash
+from principal import Principal as P
+from utils import labelHash
 
 class TypeIds(Enum):
     Null = -1
@@ -78,33 +78,34 @@ class Pipe :
 class ConstructType: pass
 class TypeTable():
     def __init__(self) -> None:
-        self._typs = b''
+        self._typs = []
         self._idx = {}
 
     def has(self, obj: ConstructType):
-        return True if obj._name in self._idx else False
+        return True if obj.name in self._idx else False
 
     def add(self, obj: ConstructType, buf):
         idx = len(self._typs)
-        self._idx[obj._name] = idx
-        self._typs += buf
+        self._idx[obj.name] = idx
+        self._typs.append(buf)
 
     def merge(self, obj: ConstructType, knot:str):
-        idx = self._idx[obj._name] if self.has(obj) else 'undefined'
+        idx = self._idx[obj.name] if self.has(obj) else 'undefined'
         knotIdx = self._idx[knot] if knot in self._idx else 'undefined'
         if idx == 'undefined':
-            raise "Missing type index for " + obj._name
+            raise "Missing type index for " + obj.name
         if knotIdx == 'undefined':
             raise "Missing type index for " + knot
         self._typs[idx] = self._typs[knotIdx]
 
         #delete the type
-        self._typs.pop(knotIdx)
+        self._typs.remove(knotIdx)
         del self._idx[knot]
 
     def encode(self) :
         length = leb128.u.encode(len(self._typs))
-        return self._typs + length
+        buf = b''.join(self._typs)
+        return length + buf
     
     def indexOf(self, typeName:str) :
         if not typeName in self._idx:
@@ -114,11 +115,9 @@ class TypeTable():
 
  # Represents an IDL type.
 class Type(metaclass=ABCMeta):
-    def __init__(self) -> None:
-        self._name = ''
 
     def display(self):
-        return self._name
+        return self.name
 
     def buildTypeTable(self, typeTable: TypeTable):
         if not typeTable.has(self):
@@ -147,8 +146,8 @@ class PrimitiveType(Type):
         super().__init__()
 
     def checkType(self, type: Type):
-        if self._name != type._name :
-            raise "type mismatch: type on the wire {}, expect type {}".format(type._name, self._name)
+        if self.name != type.name :
+            raise "type mismatch: type on the wire {}, expect type {}".format(type.name, self.name)
         return type
 
     def _buildTypeTableImpl(self, typeTable: TypeTable) :
@@ -166,10 +165,10 @@ class ConstructType(Type, metaclass=ABCMeta):
                 raise "type mismatch with uninitialized type"
             return ty
         else:
-            raise "type mismatch: type on the wire {}, expect type {}".format(type._name, self._name)
+            raise "type mismatch: type on the wire {}, expect type {}".format(type.name, self.name)
 
     def encodeType(self, typeTable: TypeTable):  
-        return typeTable.indexOf(self._name)
+        return typeTable.indexOf(self.name)
 
 # Represents an IDL Empty, a type which has no inhabitants.
 class EmptyClass(PrimitiveType):
@@ -179,7 +178,7 @@ class EmptyClass(PrimitiveType):
     def covariant(self):
         return False
     
-    def encodeValue(self):
+    def encodeValue(self, typeTable: TypeTable):
         raise "Empty cannot appear as a function argument"
 
     def encodeType(self):
@@ -207,7 +206,7 @@ class BoolClass(PrimitiveType):
     def encodeValue(self, val):
         return leb128.u.encode(1 if val else 0)
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         return leb128.i.encode(TypeIds.Bool.value)
 
     def decodeValue(self, b: Pipe, t: Type):
@@ -240,7 +239,7 @@ class NullClass(PrimitiveType):
     def encodeValue(self):
         return b''
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         return leb128.i.encode(TypeIds.Null.value)
 
     def decodeValue(self, t: Type):
@@ -266,11 +265,11 @@ class ReservedClass(PrimitiveType):
     def encodeValue(self):
         return b''
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         return leb128.i.encode(TypeIds.Reserved.value)
 
     def decodeValue(self, b: Pipe, t: Type):
-        if self._name != t._name:
+        if self.name != t.name:
             t.decodeValue(b, t)
         return None
 
@@ -293,9 +292,9 @@ class TextClass(PrimitiveType):
     def encodeValue(self, val: str):
         buf = val.encode()
         length = leb128.u.encode(len(buf))
-        return  buf + length
+        return  length + buf
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         return leb128.i.encode(TypeIds.Text.value)
 
     def decodeValue(self, b, t: Type):
@@ -323,7 +322,7 @@ class IntClass(PrimitiveType):
     def encodeValue(self, val):
         return leb128.i.encode(val)
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         return leb128.i.encode(TypeIds.Int.value)
 
     def decodeValue(self, b: Pipe, t: Type):
@@ -349,7 +348,7 @@ class NatClass(PrimitiveType):
     def encodeValue(self, val):
         return leb128.u.encode(val)
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         return leb128.i.encode(TypeIds.Nat.value)
 
     def decodeValue(self, b: Pipe, t: Type):
@@ -384,7 +383,7 @@ class FloatClass(PrimitiveType):
             raise "The length of float have to be 32 bits or 64 bits "
         return buf
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         opcode = TypeIds.Float32.value if self._bits == 32 else TypeIds.Float64.value
         return leb128.i.encode(opcode)
 
@@ -436,7 +435,7 @@ class FixedIntClass(PrimitiveType):
             raise "bits only support 8, 16, 32, 64"
         return buf
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         offset = int(math.log2(self._bits) - 3)
         return leb128.i.encode(-9 - offset)
 
@@ -498,7 +497,7 @@ class FixedNatClass(PrimitiveType):
             raise "bits only support 8, 16, 32, 64"
         return buf
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         offset = int(math.log2(self._bits) - 3)
         return leb128.i.encode(-5 - offset)
 
@@ -628,7 +627,7 @@ class OptClass(ConstructType):
 class RecordClass(ConstructType):
     def __init__(self, field: dict):
         super().__init__()
-        self._fields = dict(sorted(field, key=lambda kv: labelHash(kv[0]))) # check
+        self._fields = dict(sorted(field.items(), key=lambda kv: labelHash(kv[0]))) # check
 
     def tryAsTuple(self):
         res = []
@@ -666,7 +665,7 @@ class RecordClass(ConstructType):
         length = leb128.u.encode(len(self._fields))
         fields = b''
         for k, v in self._fields.items():
-            fields += leb128.u.encode(labelHash(k)) + v.encodeType(typeTable)
+            fields += (leb128.u.encode(labelHash(k)) + v.encodeType(typeTable))
         typeTable.add(self, opCode + length + fields)
 
 
@@ -708,7 +707,7 @@ class RecordClass(ConstructType):
 # Represents Tuple, a syntactic sugar for Record.
 # todo
 class TupleClass(RecordClass):
-    def __init__(self, _components: list(Type)):
+    def __init__(self, _components):
         x = {}
         for i, v in enumerate(_components):
             x['_' + str(i)] = v
@@ -861,7 +860,7 @@ class RecClass(ConstructType):
         else:
             typeTable.add(self, b'')
             self._type.buildTypeTable(typeTable)
-            typeTable.merge(self, self._type._name)
+            typeTable.merge(self, self._type.name)
 
 
     def decodeValue(self, b: Pipe, t: Type):
@@ -878,7 +877,7 @@ class RecClass(ConstructType):
         if self._type == None:
             raise "Recursive type uninitialized"
         else:
-            return 'μ{}.{}'.format(self.name, self._type._name)
+            return 'μ{}.{}'.format(self.name, self._type.name)
         
 # Represents an IDL principal reference
 class PrincipalClass(PrimitiveType):
@@ -906,7 +905,7 @@ class PrincipalClass(PrimitiveType):
         l = leb128.u.encode(len(buf))
         return tag + l + buf
 
-    def encodeType(self):
+    def encodeType(self,typeTable: TypeTable):
         return leb128.i.encode(TypeIds.Principal.value)
 
     def decodeValue(self, b: Pipe, t: Type):
@@ -1103,8 +1102,7 @@ def encode(params):
     if len(argTypes) != len(args):
         raise "Wrong number of message arguments"
     typetable = TypeTable()
-    forEach = iter(argTypes)
-    for item in forEach:
+    for item in argTypes:
         item.buildTypeTable(typetable)
     
     pre = prefix.encode()
@@ -1112,12 +1110,13 @@ def encode(params):
     length = leb128.u.encode(len(args))
     
     typs = b''
+    for t in argTypes:
+        typs += t.encodeType(typetable)
     vals = b''
     for i in range(len(args)):
         t = argTypes[i]
         if not t.covariant(args[i]):
             raise "Invalid {} argument: {}".format(t.display(), str(args[i]))
-        typs += t.encodeType()
         vals += t.encodeValue(args[i])
     return pre + table + length + typs + vals
 
@@ -1130,7 +1129,7 @@ def decode(data):
     if prefix_buffer != prefix:
         raise "Wrong prefix:" + prefix_buffer + 'expected prefix: DIDL'
     rawTable, rawTypes = readTypeTable(b)
-    table = map(Types.Rec(), rawTable)
+    table = map(Types.Rec, rawTable)
 
     for i, entry in enumerate(rawTable):
         t = buildType(rawTable, table, entry)
@@ -1166,37 +1165,58 @@ class Types():
     Nat16 =  FixedNatClass(16)
     Nat32 =  FixedNatClass(32)
     Nat64 =  FixedNatClass(64)
-    Tuple = TupleClass(Any)
-    Vec = VecClass(Any)
-    Opt = OptClass(Any)
-    Record = RecordClass(Any)
-    Variant = VariantClass(Any)
     Rec = RecClass()
+
+    def Tuple(types):
+        return TupleClass(types)
+
+    def Vec(t):
+        return VecClass(t)
+
+    def Opt(t):
+        return OptClass(t)
+
+    def Record(t):
+        return RecordClass(t)
+
+    def Variant(fields):
+        return VariantClass(fields)
+
     # not supported yet
     '''
-    Func = FuncClass(Any, Any, Any)
-    Service = ServiceClass(Any)
+    def Func(args, ret, annotations):
+        return FuncClass(args, ret, annotations)
+    def Service(t):
+        return ServiceClass(t)
     '''
+
 
 
 if __name__ == "__main__":
-    # nat = NatClass()
-    # res1 = encode([{'type':nat, 'value':10000000000}])
-    # print('res1:'+ res1.hex())
+    nat = NatClass()
+    res1 = encode([{'type':nat, 'value':10000000000}])
+    print('res1:'+ res1.hex())
 
-    # principal = PrincipalClass()
-    # res2 = encode([{'type': principal, 'value':'aaaaa-aa'}])
-    # print('res2' + res2.hex())
+    principal = PrincipalClass()
+    res2 = encode([{'type': principal, 'value':'aaaaa-aa'}])
+    print('res2' + res2.hex())
 
-    # res = encode([{'type': principal, 'value':'aaaaa-aa'},{'type':nat, 'value':10000000000}])
-    # print('res:' + res.hex())
+    res = encode([{'type': principal, 'value':'aaaaa-aa'},{'type':nat, 'value':10000000000}])
+    print('res:' + res.hex())
 
-    data = b'DIDL\x00\x01q\x08XTC Test'
-    print('decode data: {}'.format(data))
-    out = decode(data)
-    print(out)
+    # data = b'DIDL\x00\x01q\x08XTC Test'
+    # print('decode data: {}'.format(data))
+    # out = decode(data)
+    # print(out)
 
-    data = b'DIDL\x00\x01}\xe2\x82\xac\xe2\x82\xac\xe2\x80'
-    print('decode data: {}'.format(data))
-    out = decode(data)
-    print(out)
+    # data = b'DIDL\x00\x01}\xe2\x82\xac\xe2\x82\xac\xe2\x80'
+    # print('decode data: {}'.format(data))
+    # out = decode(data)
+    # print(out)
+
+
+    record = Types.Record({'foo':Types.Text, 'bar': Types.Int})
+    res = encode([{'type': record, 'value':{'foo': '💩', 'bar': 42}}])
+    print('4449444c016c02d3e3aa027c868eb7027101002a04f09f92a9')
+    print(res.hex())
+    print(decode(res))
