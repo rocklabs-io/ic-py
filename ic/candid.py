@@ -7,8 +7,8 @@ from struct import pack,unpack
 from abc import abstractclassmethod, ABCMeta
 from enum import Enum
 import math
-from principal import Principal as P
-from utils import labelHash
+from .principal import Principal as P
+from .utils import labelHash
 
 class TypeIds(Enum):
     Null = -1
