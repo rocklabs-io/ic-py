@@ -19,7 +19,7 @@ def encode_list(l):
 def labelHash(s:str) -> int:
     #TODO input regulatization
     if '_' in s:
-        num = int(s[1])
+        num = int(s[1:])
         if num >= 0 and num < 2**32:
             return num
     h = 0

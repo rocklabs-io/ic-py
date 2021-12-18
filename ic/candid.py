@@ -7,8 +7,8 @@ from struct import pack,unpack
 from abc import abstractclassmethod, ABCMeta
 from enum import Enum
 import math
-from .principal import Principal as P
-from .utils import labelHash
+from principal import Principal as P
+from utils import labelHash
 
 class TypeIds(Enum):
     Null = -1
@@ -666,7 +666,6 @@ class RecordClass(ConstructType):
         fields = b''
         for k, v in self._fields.items():
             fields += (leb128.u.encode(labelHash(k)) + v.encodeType(typeTable))
-        print(opCode, length, fields)
         typeTable.add(self, opCode + length + fields)
 
 
@@ -765,7 +764,6 @@ class VariantClass(ConstructType):
     def __init__(self, field):
         super().__init__()
         self._fields = dict(sorted(field.items(), key=lambda kv: labelHash(kv[0]))) # check
-        print(self._fields)
         
 
     def covariant(self, x):
@@ -796,7 +794,6 @@ class VariantClass(ConstructType):
         fields = b''
         for k, v in self._fields.items():
             fields += leb128.u.encode(labelHash(k)) + v.encodeType(typeTable)
-        print(opCode.hex(), length.hex(), fields.hex())
         typeTable.add(self, opCode + length + fields)
 
 
@@ -822,7 +819,8 @@ class VariantClass(ConstructType):
 
     @property
     def name(self) -> str:
-        return 'variant {}'.format(self._fields)
+        # return 'variant {}'.format(self._fields)
+        return 'variant'
 
     @property
     def id(self) -> int:
@@ -993,7 +991,6 @@ def readTypeTable(pipe):
         rawList.append(leb128.i.decode(safeReadByte(pipe)))
     return typeTable, rawList
 
-# todo
 def getType(rawTable, table, t:int) -> Type :
     idl = Types()
     if t < -24: 
@@ -1111,7 +1108,6 @@ def encode(params):
     
     pre = prefix.encode()
     table = typetable.encode()
-    print(table.hex())
     length = leb128.u.encode(len(args))
     
     typs = b''
@@ -1126,7 +1122,7 @@ def encode(params):
     return pre + table + length + typs + vals
 
 # decode a bytes value
-def decode(data):
+def decode(retTypes, data):
     b = Pipe(data)
     if len(data) < len(prefix):
         raise "Message length smaller than prefix number"
@@ -1134,6 +1130,10 @@ def decode(data):
     if prefix_buffer != prefix:
         raise "Wrong prefix:" + prefix_buffer + 'expected prefix: DIDL'
     rawTable, rawTypes = readTypeTable(b)
+    if type(retTypes) != list:
+        retTypes = [retTypes]
+    if len(rawTable) < len(retTypes):
+        raise "Wrong number of return values"
     table = [Types.Rec] * len(rawTable)
 
     for i, entry in enumerate(rawTable):
@@ -1144,11 +1144,11 @@ def decode(data):
     for t in rawTypes:
         types.append(getType(rawTable, table, t))
     outputs = []
-    for i in types:
+    for i, t in enumerate(retTypes):
         # outputs[i.name] = i.decodeValue(b, i)
         outputs.append({
-            'type': i.name,
-            'value': i.decodeValue(b, i)
+            'type': t.name,
+            'value': t.decodeValue(b, types[i])
             })
 
     return outputs
@@ -1216,10 +1216,10 @@ if __name__ == "__main__":
     # out = decode(data)
     # print(out)
 
-    data = b'DIDL\x00\x01}\xe2\x82\xac\xe2\x82\xac\xe2\x80'
-    print('decode data: {}'.format(data))
-    out = decode(data)
-    print(out)
+    # data = b'DIDL\x00\x01}\xe2\x82\xac\xe2\x82\xac\xe2\x80'
+    # print('decode data: {}'.format(data))
+    # out = decode(data)
+    # print(out)
 
     # record
     # record = Types.Record({'foo':Types.Text, 'bar': Types.Int})
@@ -1232,13 +1232,12 @@ if __name__ == "__main__":
     # res = encode([{'type': tup, 'value': [42, '💩']}])
     # print('expected:', '4449444c016c02007c017101002a04f09f92a9')
     # print('current:', res.hex())
-    # data = bytes.fromhex('4449444c016c02007c017101002a04f09f92a9')
-    # print(decode(data))
+    # print(decode(tup, res))
 
     # variant
-    tup = Types.Variant({'ok': Types.Text, 'err': Types.Text})
-    res = encode([{'type': tup, 'value': {'ok': 'good'}}])
-    print('expected:', '4449444c016b029cc20171e58eb4027101000004676f6f64')
+    tup = Types.Tuple(Types.Variant({'ok': Types.Text, 'err': Types.Text}))
+    res = encode([{'type': tup, 'value': [{'ok': 'good'}] }])
+    print('expected:', '4449444c026b029cc20171e58eb402716c01000001010004676f6f64')
     print('current:', res.hex())
-    print(decode(res))
+    # print(decode(tup, res))
     
