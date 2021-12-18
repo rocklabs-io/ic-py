@@ -1,10 +1,14 @@
+import enum
+import re
 from typing import AbstractSet, Any, List, Sequence
+import typing
 import leb128
 from struct import pack,unpack
 from abc import abstractclassmethod, ABCMeta
 from enum import Enum
 import math
-from .principal import Principal as P
+from principal import Principal as P
+from utils import labelHash
 
 class TypeIds(Enum):
     Null = -1
@@ -74,33 +78,34 @@ class Pipe :
 class ConstructType: pass
 class TypeTable():
     def __init__(self) -> None:
-        self._typs = b''
+        self._typs = []
         self._idx = {}
 
     def has(self, obj: ConstructType):
-        return True if obj._name in self._idx else False
+        return True if obj.name in self._idx else False
 
     def add(self, obj: ConstructType, buf):
         idx = len(self._typs)
-        self._idx[obj._name] = idx
-        self._typs += buf
+        self._idx[obj.name] = idx
+        self._typs.append(buf)
 
     def merge(self, obj: ConstructType, knot:str):
-        idx = self._idx[obj._name] if self.has(obj) else 'undefined'
+        idx = self._idx[obj.name] if self.has(obj) else 'undefined'
         knotIdx = self._idx[knot] if knot in self._idx else 'undefined'
         if idx == 'undefined':
-            raise "Missing type index for " + obj._name
+            raise "Missing type index for " + obj.name
         if knotIdx == 'undefined':
             raise "Missing type index for " + knot
         self._typs[idx] = self._typs[knotIdx]
 
         #delete the type
-        self._typs.pop(knotIdx)
+        self._typs.remove(knotIdx)
         del self._idx[knot]
 
     def encode(self) :
         length = leb128.u.encode(len(self._typs))
-        return self._typs + length
+        buf = b''.join(self._typs)
+        return length + buf
     
     def indexOf(self, typeName:str) :
         if not typeName in self._idx:
@@ -110,11 +115,9 @@ class TypeTable():
 
  # Represents an IDL type.
 class Type(metaclass=ABCMeta):
-    def __init__(self) -> None:
-        self._name = ''
 
     def display(self):
-        return self._name
+        return self.name
 
     def buildTypeTable(self, typeTable: TypeTable):
         if not typeTable.has(self):
@@ -143,8 +146,8 @@ class PrimitiveType(Type):
         super().__init__()
 
     def checkType(self, type: Type):
-        if self._name != type._name :
-            raise "type mismatch: type on the wire {}, expect type {}".format(type._name, self._name)
+        if self.name != type.name :
+            raise "type mismatch: type on the wire {}, expect type {}".format(type.name, self.name)
         return type
 
     def _buildTypeTableImpl(self, typeTable: TypeTable) :
@@ -162,10 +165,10 @@ class ConstructType(Type, metaclass=ABCMeta):
                 raise "type mismatch with uninitialized type"
             return ty
         else:
-            raise "type mismatch: type on the wire {}, expect type {}".format(type._name, self._name)
+            raise "type mismatch: type on the wire {}, expect type {}".format(type.name, self.name)
 
     def encodeType(self, typeTable: TypeTable):  
-        return typeTable.indexOf(self._name)
+        return typeTable.indexOf(self.name)
 
 # Represents an IDL Empty, a type which has no inhabitants.
 class EmptyClass(PrimitiveType):
@@ -175,7 +178,7 @@ class EmptyClass(PrimitiveType):
     def covariant(self):
         return False
     
-    def encodeValue(self):
+    def encodeValue(self, typeTable: TypeTable):
         raise "Empty cannot appear as a function argument"
 
     def encodeType(self):
@@ -203,7 +206,7 @@ class BoolClass(PrimitiveType):
     def encodeValue(self, val):
         return leb128.u.encode(1 if val else 0)
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         return leb128.i.encode(TypeIds.Bool.value)
 
     def decodeValue(self, b: Pipe, t: Type):
@@ -236,7 +239,7 @@ class NullClass(PrimitiveType):
     def encodeValue(self):
         return b''
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         return leb128.i.encode(TypeIds.Null.value)
 
     def decodeValue(self, t: Type):
@@ -262,11 +265,11 @@ class ReservedClass(PrimitiveType):
     def encodeValue(self):
         return b''
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         return leb128.i.encode(TypeIds.Reserved.value)
 
     def decodeValue(self, b: Pipe, t: Type):
-        if self._name != t._name:
+        if self.name != t.name:
             t.decodeValue(b, t)
         return None
 
@@ -289,9 +292,9 @@ class TextClass(PrimitiveType):
     def encodeValue(self, val: str):
         buf = val.encode()
         length = leb128.u.encode(len(buf))
-        return  buf + length
+        return  length + buf
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         return leb128.i.encode(TypeIds.Text.value)
 
     def decodeValue(self, b, t: Type):
@@ -319,7 +322,7 @@ class IntClass(PrimitiveType):
     def encodeValue(self, val):
         return leb128.i.encode(val)
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         return leb128.i.encode(TypeIds.Int.value)
 
     def decodeValue(self, b: Pipe, t: Type):
@@ -345,7 +348,7 @@ class NatClass(PrimitiveType):
     def encodeValue(self, val):
         return leb128.u.encode(val)
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         return leb128.i.encode(TypeIds.Nat.value)
 
     def decodeValue(self, b: Pipe, t: Type):
@@ -380,7 +383,7 @@ class FloatClass(PrimitiveType):
             raise "The length of float have to be 32 bits or 64 bits "
         return buf
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         opcode = TypeIds.Float32.value if self._bits == 32 else TypeIds.Float64.value
         return leb128.i.encode(opcode)
 
@@ -421,18 +424,18 @@ class FixedIntClass(PrimitiveType):
     
     def encodeValue(self, val):
         if self._bits == 8:
-            buf = pack('b', val) # signed char
+            buf = pack('b', val) # signed char -> Int8
         elif self._bits == 16:
-            buf = pack('h', val) # short
+            buf = pack('h', val) # short -> Int16
         elif self._bits == 32:
-            buf = pack('i', val) # int
+            buf = pack('i', val) # int -> Int32
         elif self._bits == 64:
-            buf = pack('q', val) # long long
+            buf = pack('q', val) # long long -> Int64
         else:
             raise "bits only support 8, 16, 32, 64"
         return buf
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         offset = int(math.log2(self._bits) - 3)
         return leb128.i.encode(-9 - offset)
 
@@ -440,13 +443,13 @@ class FixedIntClass(PrimitiveType):
         self.checkType(t)
         by = safeRead(b, self._bits // 8) 
         if self._bits == 8:
-            return unpack('b', by)[0] # signed char
+            return unpack('b', by)[0] # signed char -> Int8
         elif self._bits == 16:
-            return unpack('h', by)[0] # short
+            return unpack('h', by)[0] # short -> Int16
         elif self._bits == 32:
-            return unpack('i', by) # int
+            return unpack('i', by) # int -> Int32
         elif self._bits == 64:
-            return unpack('q', by) # long long
+            return unpack('q', by) # long long -> Int64
         else:
             raise "bits only support 8, 16, 32, 64"
 
@@ -483,18 +486,18 @@ class FixedNatClass(PrimitiveType):
     
     def encodeValue(self, val):
         if self._bits == 8:
-            buf = pack('B', val) # unsigned char
+            buf = pack('B', val) # unsigned char -> Nat8
         elif self._bits == 16:
-            buf = pack('H', val) # unsigned short
+            buf = pack('H', val) # unsigned short -> Nat16
         elif self._bits == 32:
-            buf = pack('I', val) # unsigned int
+            buf = pack('I', val) # unsigned int -> Nat32
         elif self._bits == 64:
-            buf = pack('Q', val) # unsigned long long
+            buf = pack('Q', val) # unsigned long long -> Nat64
         else:
             raise "bits only support 8, 16, 32, 64"
         return buf
 
-    def encodeType(self):
+    def encodeType(self, typeTable: TypeTable):
         offset = int(math.log2(self._bits) - 3)
         return leb128.i.encode(-5 - offset)
 
@@ -502,13 +505,13 @@ class FixedNatClass(PrimitiveType):
         self.checkType(t)
         by = safeRead(b, self._bits // 8) 
         if self._bits == 8:
-            return unpack('B', by)[0] # unsigned char
+            return unpack('B', by)[0] # unsigned char -> Nat8
         elif self._bits == 16:
-            return unpack('H', by)[0] # unsigned short
+            return unpack('H', by)[0] # unsigned short -> Nat16
         elif self._bits == 32:
-            return unpack('I', by) # unsigned int
+            return unpack('I', by) # unsigned int -> Nat32
         elif self._bits == 64:
-            return unpack('Q', by) # unsigned long long
+            return unpack('Q', by) # unsigned long long -> Nat64
         else:
             raise "bits only support 8, 16, 32, 64"
 
@@ -549,7 +552,7 @@ class VecClass(ConstructType):
         
     def _buildTypeTableImpl(self, typeTable: TypeTable):
         self._type.buildTypeTable(typeTable)
-        opCode = leb128.u.encode(TypeIds.Vec)
+        opCode = leb128.u.encode(TypeIds.Vec.value)
         buffer = self._type.encodeType(typeTable)
         typeTable.add(self, opCode + buffer)
 
@@ -593,7 +596,7 @@ class OptClass(ConstructType):
 
     def _buildTypeTableImpl(self, typeTable: TypeTable):
         self._type.buildTypeTable(typeTable)
-        opCode = leb128.u.encode(TypeIds.Opt)
+        opCode = leb128.u.encode(TypeIds.Opt.value)
         buffer = self._type.encodeType(typeTable)
         typeTable.add(self, opCode + buffer)
 
@@ -622,101 +625,213 @@ class OptClass(ConstructType):
 # Represents an IDL Record
 # todo
 class RecordClass(ConstructType):
-    def __init__(self, filed):
+    def __init__(self, field: dict):
         super().__init__()
-        self._fields = []
-        pass
+        self._fields = dict(sorted(field.items(), key=lambda kv: labelHash(kv[0]))) # check
 
     def tryAsTuple(self):
-        pass
+        res = []
+        idx = 0
+        for k, v in self._fields.items():
+            if k != "_" + str(idx):
+                return None
+            res.append(v)
+            idx += 1
+        return res
 
-    def covariant(self, x):
-        pass
+    def covariant(self, x: dict):
+        if type(x) != dict:
+            raise "Expected dict type input."
+        for k, v in self._fields.items():
+            if not k in x:
+                raise "Record is missing key {}".format(k)
+            if v.covariant(x[k]):
+                continue
+            else:
+                return False
+        return True
     
     def encodeValue(self, val):
-        pass
+        bufs = []
+        for k,v in self._fields.items():
+            bufs.append(v.encodeValue(val[k]))
+        return b''.join(bufs)
+
 
     def _buildTypeTableImpl(self, typeTable: TypeTable):
-        pass
+        for _, v in self._fields.items():
+            v.buildTypeTable(typeTable)
+        opCode = leb128.i.encode(TypeIds.Record.value)
+        length = leb128.u.encode(len(self._fields))
+        fields = b''
+        for k, v in self._fields.items():
+            fields += (leb128.u.encode(labelHash(k)) + v.encodeType(typeTable))
+        print(opCode, length, fields)
+        typeTable.add(self, opCode + length + fields)
 
 
     def decodeValue(self, b: Pipe, t: Type):
-        pass
+        record = self.checkType(t)
+        if not isinstance(record, RecordClass):
+            raise "Not a record type"
+        
+        x = {}
+        idx = 0
+        keys = list(self._fields.keys())
+        for k, v in record._fields :
+            if idx >= len(self._fields) or ( labelHash(keys[idx]) != labelHash(k) ):
+                # skip field
+                v.decodeValue(b, v)
+                continue
+            expectKey = keys[idx]
+            exceptValue = self._fields[expectKey]
+            x[expectKey] = exceptValue.decodeValue(b, v)
+            idx += 1
+        if idx < len(self._fields):
+            raise "Cannot find field {}".format(keys[idx])
+        return x
 
     @property
     def name(self) -> str:
-        pass
+        return "record {}".format(self._fields)
 
     @property
     def id(self) -> int:
         return TypeIds.Record.value
 
     def display(self):
-        pass
+        d = {}
+        for k, v in self._fields.items():
+            d[v] = v.display()
+        return "record {}".format(d)
 
 # Represents Tuple, a syntactic sugar for Record.
 # todo
-class TupleClass(ConstructType):
-    def __init__(self, _components):
-        super().__init__()
+class TupleClass(RecordClass):
+    def __init__(self, *_components):
+        x = {}
+        for i, v in enumerate(_components):
+            x['_' + str(i)] = v
+        super().__init__(x)
         self._components = _components
-        pass
+    
 
     def covariant(self, x):
-        pass
+        if type(x) != list:
+            raise "Expected list type input."
+        for idx, v in enumerate(self._components):
+            if v.covariant(x[idx]):
+                continue
+            else:
+                return False
+        if len(x) < len(self._fields):
+            return False
+        return True
     
-    def encodeValue(self, val):
-        pass
-
-    def _buildTypeTableImpl(self, typeTable: TypeTable):
-        pass
+    def encodeValue(self, val:list):
+        bufs = b''
+        for i in range(len(self._components)):
+            bufs += self._components[i].encodeValue(val[i])
+        return bufs
 
 
     def decodeValue(self, b: Pipe, t: Type):
-        pass
-
-    @property
-    def name(self) -> str:
-        pass
+        tup = self.checkType(t)
+        if not isinstance(tup, TupleClass):
+            raise "not a tuple type"
+        if len(tup._components) != self._components:
+            raise "tuple mismatch"
+        res = []
+        for i, wireType in enumerate(tup._components):
+            if i >= len(self._components):
+                wireType.decodeValue(b, wireType)
+            else:
+                res.append(self._components[i].decodeValue(b, wireType))
+        return b''.join(res)
 
     @property
     def id(self) -> int:
         return TypeIds.Tuple.value
 
     def display(self):
-        pass
+        d = []
+        for item in self._components:
+            d.append(item.display())
+        return "record {" + '{}'.format(';'.join(d)) + '}'
 
 # Represents an IDL Variant
 # todo
 class VariantClass(ConstructType):
-    def __init__(self, filed):
+    def __init__(self, field):
         super().__init__()
-        self._fields = []
-        pass
+        self._fields = dict(sorted(field.items(), key=lambda kv: labelHash(kv[0]))) # check
+        
 
     def covariant(self, x):
-        pass
+        if len(x) != 1:
+            return False
+        for k, v in self._fields.items():
+            if not k in x or v.covariant(x[k]):
+                continue
+            else:
+                return False
+        return True
     
     def encodeValue(self, val):
-        pass
+        idx = 0
+        for name, ty in self._fields.items():
+            if name in val:
+                count = leb128.i.encode(idx)
+                buf = ty.encodeValue(val[name])
+                return count + buf
+            idx += 1
+        raise "Variant has no data: {}".format(val) 
 
     def _buildTypeTableImpl(self, typeTable: TypeTable):
-        pass
+        for _, v in self._fields.items():
+            v.buildTypeTable(typeTable)
+        opCode = leb128.i.encode(TypeIds.Variant.value)
+        length = leb128.u.encode(len(self._fields))
+        fields = b''
+        for k, v in self._fields.items():
+            fields += leb128.u.encode(labelHash(k)) + v.encodeType(typeTable)
+        print(opCode.hex(), length.hex(), fields.hex())
+        typeTable.add(self, opCode + length + fields)
 
 
     def decodeValue(self, b: Pipe, t: Type):
-        pass
+        variant = self.checkType(t)
+        if isinstance(variant, VariantClass):
+            raise "Not a variant type"
+        idx = lenDecode(b)
+        if idx >= len(variant._fields):
+            raise "Invalid variant index: {}".format(idx)
+        keys = list(variant._fields.keys())
+        wireHash = keys[idx]
+        wireType = variant._fields[wireHash]
+
+        for key, expectType in self._fields.items():
+            if labelHash(wireHash) == labelHash(key):
+                ret = {}
+                value = expectType.decodeValue(b, wireType)
+                ret[key] = value
+                return ret
+        raise "Cannot find field hash {}".format(wireHash)
+
 
     @property
     def name(self) -> str:
-        pass
+        return 'variant {}'.format(self._fields)
 
     @property
     def id(self) -> int:
         return TypeIds.Variant.value
 
     def display(self):
-        pass
+        d = {}
+        for k, v in self._fields.items():
+            d[k] = '' if v.name == None else v.name
+        return 'variant {}'.format(d)
 
 # Represents a reference to an IDL type, used for defining recursive data types.
 class RecClass(ConstructType):
@@ -747,7 +862,7 @@ class RecClass(ConstructType):
         else:
             typeTable.add(self, b'')
             self._type.buildTypeTable(typeTable)
-            typeTable.merge(self, self._type._name)
+            typeTable.merge(self, self._type.name)
 
 
     def decodeValue(self, b: Pipe, t: Type):
@@ -764,7 +879,7 @@ class RecClass(ConstructType):
         if self._type == None:
             raise "Recursive type uninitialized"
         else:
-            return 'μ{}.{}'.format(self.name, self._type._name)
+            return 'μ{}.{}'.format(self.name, self._type.name)
         
 # Represents an IDL principal reference
 class PrincipalClass(PrimitiveType):
@@ -792,7 +907,7 @@ class PrincipalClass(PrimitiveType):
         l = leb128.u.encode(len(buf))
         return tag + l + buf
 
-    def encodeType(self):
+    def encodeType(self,typeTable: TypeTable):
         return leb128.i.encode(TypeIds.Principal.value)
 
     def decodeValue(self, b: Pipe, t: Type):
@@ -811,6 +926,7 @@ class PrincipalClass(PrimitiveType):
     def id(self) -> int:
         return TypeIds.Principal.value
 
+# TODO class FunClass and ServiceClass
 
 # through Pipe to decode bytes
 def lenDecode(pipe: Pipe):
@@ -841,7 +957,35 @@ def readTypeTable(pipe):
     typeTable_len = lenDecode(pipe)
     # contruct type todo
     for _ in range(typeTable_len):
-        pass
+        ty = leb128.i.decode(safeReadByte(pipe))
+        if ty  == TypeIds.Opt.value:
+            pass
+        elif ty == TypeIds.Vec.value:
+            t = leb128.i.decode(safeReadByte(pipe))
+            typeTable.append([ty, t])
+        elif ty == TypeIds.Record.value:
+            pass
+        elif ty == TypeIds.Variant.value:
+            fields = []
+            objLength = lenDecode(pipe)
+            prevHash = -1
+            for _ in range(objLength):
+                hash = lenDecode(pipe)
+                if hash >= math.pow(2, 32):
+                    raise "field id out of 32-bit range"
+                if type(prevHash) == int and prevHash >= hash:
+                    raise "field id collision or not sorted"
+                prevHash = hash
+                t = leb128.i.decode(safeReadByte(pipe))
+                fields.append([hash, t])
+            typeTable.append([ty, fields])
+        elif ty == TypeIds.Func.value:
+            pass
+        elif ty == TypeIds.Service.value:
+            pass
+        else:
+            raise "Illegal op_code: {}".format(ty)
+        
     rawList = []
     types_len = lenDecode(pipe)
     for _ in range(types_len):
@@ -853,44 +997,98 @@ def getType(t:int) -> Type :
     idl = Types()
     if t < -24: 
         raise "not supported type"
-    if   t == -1:
-        return idl.Null
-    elif t == -2:
-        return idl.Bool
-    elif t == -3:
-        return idl.Nat
-    elif t == -4:
-        return idl.Int
-    # elif t == -5:
-    #     return idl.Nat8
-    # elif t == -6:
-    #     return idl.Nat16
-    # elif t == -7:
-    #     return idl.Nat32
-    # elif t == -8:
-    #     return idl.Nat64
-    # elif t == -9:
-    #     return idl.Int8
-    # elif t == -10:
-    #     return idl.Int16
-    # elif t == -11:
-    #     return idl.Int32
-    # elif t == -12:
-    #     return idl.Int64
-    # elif t == -13:
-    #     return idl.Float32
-    # elif t == -14:
-    #     return idl.Float64
-    elif t == -15:
-        return idl.Text
-    elif t == -16:
-        return idl.Reserved
-    elif t == -17:
-        return idl.Empty
-    elif t == -24:
-        return idl.Principal
+    if t < 0:
+        if   t == -1:
+            return idl.Null
+        elif t == -2:
+            return idl.Bool
+        elif t == -3:
+            return idl.Nat
+        elif t == -4:
+            return idl.Int
+        elif t == -5:
+            return idl.Nat8
+        elif t == -6:
+            return idl.Nat16
+        elif t == -7:
+            return idl.Nat32
+        elif t == -8:
+            return idl.Nat64
+        elif t == -9:
+            return idl.Int8
+        elif t == -10:
+            return idl.Int16
+        elif t == -11:
+            return idl.Int32
+        elif t == -12:
+            return idl.Int64
+        elif t == -13:
+            return idl.Float32
+        elif t == -14:
+            return idl.Float64
+        elif t == -15:
+            return idl.Text
+        elif t == -16:
+            return idl.Reserved
+        elif t == -17:
+            return idl.Empty
+        elif t == -24:
+            return idl.Principal
+        else:
+            raise "Illegal op_code:{}".format(t)
+    return None
+
+
+def buildType(rawTable, table, entry):
+    ty = entry[0]
+    if ty == TypeIds.Vec.value:
+        if ty >= len(rawTable):
+            raise "type index out of range"
+        t = getType(entry[1])
+        if t == None:
+            t = table[t]
+        return Types.Vec(t)
+    elif ty == TypeIds.Opt.value:
+        if ty >= len(rawTable):
+            raise "type index out of range"
+        t = getType(entry[1])
+        if t == None:
+            t = table[t]
+        return Types.Opt(t)
+    elif ty == TypeIds.Record.value:
+        fields = {}
+        for hash , t in entry[1].items():
+            name = '_' + str(hash)
+            if t >= len(rawTable):
+                raise "type index out of range"
+            temp = getType(t)
+            if temp == None:
+                temp = table[t]
+            fields[name] = temp
+        record = Types.Record(fields)
+        tup = record.tryAsTuple()
+        if type(tup) == list:
+            return Types.Tuple(tup)
+        else:
+            return record
+    elif ty == TypeIds.Variant.value:
+        fields = {}
+        for hash , t in entry[1]:
+            name = '_' + str(hash)
+            if t >= len(rawTable):
+                raise "type index out of range"
+            temp = getType(t)
+            if temp == None:
+                temp = table[t]
+            fields[name] = temp
+        return Types.Variant(fields)
+    # elif TypeIds.Func.value:
+    #     return Types.Func([], [], [])
+    # elif TypeIds.Service.value:
+    #     return Types.Service({})
     else:
-        raise "not supported yet"
+        raise "Illegal op_code: {}".format(ty)
+    
 
 
 # params = [{type, value}]
@@ -905,25 +1103,26 @@ def encode(params):
     if len(argTypes) != len(args):
         raise "Wrong number of message arguments"
     typetable = TypeTable()
-    forEach = iter(argTypes)
-    for item in forEach:
+    for item in argTypes:
         item.buildTypeTable(typetable)
     
     pre = prefix.encode()
     table = typetable.encode()
+    print(table.hex())
     length = leb128.u.encode(len(args))
     
     typs = b''
+    for t in argTypes:
+        typs += t.encodeType(typetable)
     vals = b''
     for i in range(len(args)):
         t = argTypes[i]
         if not t.covariant(args[i]):
             raise "Invalid {} argument: {}".format(t.display(), str(args[i]))
-        typs += t.encodeType()
         vals += t.encodeValue(args[i])
     return pre + table + length + typs + vals
 
-# data: b'DIDL\x00\x01q\x08XTC Test'
+# decode a bytes value
 def decode(data):
     b = Pipe(data)
     if len(data) < len(prefix):
@@ -932,8 +1131,13 @@ def decode(data):
     if prefix_buffer != prefix:
         raise "Wrong prefix:" + prefix_buffer + 'expected prefix: DIDL'
     rawTable, rawTypes = readTypeTable(b)
-    # todo parse rawTable
-    types = map(getType, rawTypes)
+    table = map(Types.Rec, rawTable)
+
+    for i, entry in enumerate(rawTable):
+        t = buildType(rawTable, table, entry)
+        table[i].fill(t)
+
+    types = list(map(getType, rawTypes))
     outputs = []
     for i in types:
         # outputs[i.name] = i.decodeValue(b, i)
@@ -941,6 +1145,7 @@ def decode(data):
             'type': i.name,
             'value': i.decodeValue(b, i)
             })
+
     return outputs
 
 class Types():
@@ -952,8 +1157,41 @@ class Types():
     Nat = NatClass()
     Text = TextClass()
     Principal = PrincipalClass()
+    Float32 =  FloatClass(32)
+    Float64 =  FloatClass(64)
+    Int8 =  FixedIntClass(8)
+    Int16 =  FixedIntClass(16)
+    Int32 =  FixedIntClass(32)
+    Int64 =  FixedIntClass(64)
+    Nat8 =  FixedNatClass(8)
+    Nat16 =  FixedNatClass(16)
+    Nat32 =  FixedNatClass(32)
+    Nat64 =  FixedNatClass(64)
+    Rec = RecClass()
+
+    def Tuple(*types):
+        return TupleClass(*types)
+
+    def Vec(t):
+        return VecClass(t)
+
+    def Opt(t):
+        return OptClass(t)
+
+    def Record(t):
+        return RecordClass(t)
+
+    def Variant(fields):
+        return VariantClass(fields)
+
     # not supported yet
-    
+    '''
+    def Func(args, ret, annotations):
+        return FuncClass(args, ret, annotations)
+    def Service(t):
+        return ServiceClass(t)
+    '''
+
 
 
 if __name__ == "__main__":
@@ -968,12 +1206,34 @@ if __name__ == "__main__":
     # res = encode([{'type': principal, 'value':'aaaaa-aa'},{'type':nat, 'value':10000000000}])
     # print('res:' + res.hex())
 
-    data = b'DIDL\x00\x01q\x08XTC Test'
-    print('decode data: {}'.format(data))
-    out = decode(data)
-    print(out)
+    # data = b'DIDL\x00\x01q\x08XTC Test'
+    # print('decode data: {}'.format(data))
+    # out = decode(data)
+    # print(out)
 
-    data = b'DIDL\x00\x01}\xe2\x82\xac\xe2\x82\xac\xe2\x80'
-    print('decode data: {}'.format(data))
-    out = decode(data)
-    print(out)
+    # data = b'DIDL\x00\x01}\xe2\x82\xac\xe2\x82\xac\xe2\x80'
+    # print('decode data: {}'.format(data))
+    # out = decode(data)
+    # print(out)
+
+    # record
+    # record = Types.Record({'foo':Types.Text, 'bar': Types.Int})
+    # res = encode([{'type': record, 'value':{'foo': '💩', 'bar': 42}}])
+    # print('expected:', '4449444c016c02d3e3aa027c868eb7027101002a04f09f92a9')
+    # print('current:', res.hex())
+
+    # tuple(Int, Nat)
+    # tup = Types.Tuple(Types.Int, Types.Text)
+    # res = encode([{'type': tup, 'value': [42, '💩']}])
+    # print('expected:', '4449444c016c02007c017101002a04f09f92a9')
+    # print('current:', res.hex())
+    # data = bytes.fromhex('4449444c016c02007c017101002a04f09f92a9')
+    # print(decode(data))
+
+    # variant
+    tup = Types.Variant({'ok': Types.Text, 'err': Types.Text})
+    res = encode([{'type': tup, 'value': {'ok': 'good'}}])
+    print('expected:', '4449444c016b029cc20171e58eb4027101000004676f6f64')
+    print('current:', res.hex())
+    print(decode(res))
+    

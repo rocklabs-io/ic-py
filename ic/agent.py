@@ -1,7 +1,11 @@
 import time
 import cbor2
+<<<<<<< HEAD
 from waiter import wait
 from .candid import decode
+=======
+from .candid import Types, decode, encode
+>>>>>>> 4bd582d337ad70f9939a7974e72c3ac5a8c82c61
 from .identity import *
 from .constants import *
 from .utils import to_request_id
@@ -96,12 +100,20 @@ class Agent:
             ['request_status'.encode(), req_id],
         ]
         cert = self.read_state_raw(canister_id, paths)
+<<<<<<< HEAD
         #print(cert)
         status = lookup(['request_status'.encode(), req_id, 'status'.encode()], cert)
         if (status == None):
             return status, cert
         else:
             return status.decode(), cert
+=======
+        val = lookup(paths[0], cert)
+        # print(val)
+        # time type is Int, so plus prefix "DIDL\x00\x01\x7c"
+        print(encode([{'type': Types.Int}]))
+        return decode('DIDL\x00\x01\x7c'.encode() + val)
+>>>>>>> 4bd582d337ad70f9939a7974e72c3ac5a8c82c61
 
     def poll(self, canister_id, req_id, delay=1, timeout=10):
         status = None
