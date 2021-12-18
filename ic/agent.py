@@ -1,7 +1,7 @@
 import time
 import cbor2
 from waiter import wait
-from .candid import decode
+from .candid import decode, Types
 from .identity import *
 from .constants import *
 from .utils import to_request_id
@@ -18,6 +18,19 @@ def sign_request(req, iden):
         'sender_sig': sig[1]
     }
     return req_id, cbor2.dumps(envelop)
+
+# According to did, get the method returned param type
+def getType(method:str):
+    if method == 'totalSupply':
+        return Types.Nat
+    elif method == 'name':
+        return Types.Text
+    elif method == 'balanceOf':
+        return Types.Nat
+    elif method == 'transfer':
+        return Types.Tuple(Types.Variant)
+    else:
+        pass
 
 class Agent:
     def __init__(self, identity, client, nonce_factory=None, ingress_expiry=300, root_key=IC_ROOT_KEY):
@@ -57,7 +70,8 @@ class Agent:
         _, data = sign_request(req, self.identity)
         result = self.query_endpoint(canister_id, data)
         if result['status'] == 'replied':
-            arg = decode(result['reply']['arg'])
+            method_type = getType(method_name)
+            arg = decode(method_type, result['reply']['arg'])
             return arg
         elif result['status'] == 'rejected':
             return result['reject_message']

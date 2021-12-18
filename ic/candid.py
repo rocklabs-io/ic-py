@@ -7,8 +7,8 @@ from struct import pack,unpack
 from abc import abstractclassmethod, ABCMeta
 from enum import Enum
 import math
-from principal import Principal as P
-from utils import labelHash
+from .principal import Principal as P
+from .utils import labelHash
 
 class TypeIds(Enum):
     Null = -1
@@ -736,7 +736,7 @@ class TupleClass(RecordClass):
 
     def decodeValue(self, b: Pipe, t: Type):
         tup = self.checkType(t)
-        if not isinstance(tup, TupleClass):
+        if not isinstance(tup, ConstructType):
             raise "not a tuple type"
         if len(tup._components) != self._components:
             raise "tuple mismatch"
@@ -1132,8 +1132,7 @@ def decode(retTypes, data):
     rawTable, rawTypes = readTypeTable(b)
     if type(retTypes) != list:
         retTypes = [retTypes]
-    if len(rawTable) < len(retTypes):
-        raise "Wrong number of return values"
+
     table = [Types.Rec] * len(rawTable)
 
     for i, entry in enumerate(rawTable):
@@ -1239,5 +1238,5 @@ if __name__ == "__main__":
     res = encode([{'type': tup, 'value': [{'ok': 'good'}] }])
     print('expected:', '4449444c026b029cc20171e58eb402716c01000001010004676f6f64')
     print('current:', res.hex())
-    # print(decode(tup, res))
+    print(decode(tup, res))
     
