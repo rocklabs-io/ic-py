@@ -666,6 +666,7 @@ class RecordClass(ConstructType):
         fields = b''
         for k, v in self._fields.items():
             fields += (leb128.u.encode(labelHash(k)) + v.encodeType(typeTable))
+        print(opCode, length, fields)
         typeTable.add(self, opCode + length + fields)
 
 
@@ -707,7 +708,7 @@ class RecordClass(ConstructType):
 # Represents Tuple, a syntactic sugar for Record.
 # todo
 class TupleClass(RecordClass):
-    def __init__(self, _components):
+    def __init__(self, *_components):
         x = {}
         for i, v in enumerate(_components):
             x['_' + str(i)] = v
@@ -716,8 +717,8 @@ class TupleClass(RecordClass):
     
 
     def covariant(self, x):
-        if type(x) != dict:
-            raise "Expected dict type input."
+        if type(x) != list:
+            raise "Expected list type input."
         for idx, v in enumerate(self._components):
             if v.covariant(x[idx]):
                 continue
@@ -763,7 +764,7 @@ class TupleClass(RecordClass):
 class VariantClass(ConstructType):
     def __init__(self, field):
         super().__init__()
-        self._fields = dict(sorted(field, key=lambda kv: labelHash(kv[0]))) # check
+        self._fields = dict(sorted(field.items(), key=lambda kv: labelHash(kv[0]))) # check
         
 
     def covariant(self, x):
@@ -794,6 +795,7 @@ class VariantClass(ConstructType):
         fields = b''
         for k, v in self._fields.items():
             fields += leb128.u.encode(labelHash(k)) + v.encodeType(typeTable)
+        print(opCode.hex(), length.hex(), fields.hex())
         typeTable.add(self, opCode + length + fields)
 
 
@@ -975,9 +977,8 @@ def readTypeTable(pipe):
                     raise "field id collision or not sorted"
                 prevHash = hash
                 t = leb128.i.decode(safeReadByte(pipe))
-                fields.append([ty, fields])
-                break
-            typeTable.append[ty, fields]
+                fields.append([hash, t])
+            typeTable.append([ty, fields])
         elif ty == TypeIds.Func.value:
             pass
         elif ty == TypeIds.Service.value:
@@ -1072,7 +1073,7 @@ def buildType(rawTable, table, entry):
             return record
     elif ty == TypeIds.Variant.value:
         fields = {}
-        for hash , t in entry[1].items():
+        for hash , t in entry[1]:
             name = '_' + str(hash)
             if t >= len(rawTable):
                 raise "type index out of range"
@@ -1107,6 +1108,7 @@ def encode(params):
     
     pre = prefix.encode()
     table = typetable.encode()
+    print(table.hex())
     length = leb128.u.encode(len(args))
     
     typs = b''
@@ -1135,7 +1137,7 @@ def decode(data):
         t = buildType(rawTable, table, entry)
         table[i].fill(t)
 
-    types = map(getType, rawTypes)
+    types = list(map(getType, rawTypes))
     outputs = []
     for i in types:
         # outputs[i.name] = i.decodeValue(b, i)
@@ -1167,8 +1169,8 @@ class Types():
     Nat64 =  FixedNatClass(64)
     Rec = RecClass()
 
-    def Tuple(types):
-        return TupleClass(types)
+    def Tuple(*types):
+        return TupleClass(*types)
 
     def Vec(t):
         return VecClass(t)
@@ -1193,16 +1195,16 @@ class Types():
 
 
 if __name__ == "__main__":
-    nat = NatClass()
-    res1 = encode([{'type':nat, 'value':10000000000}])
-    print('res1:'+ res1.hex())
+    # nat = NatClass()
+    # res1 = encode([{'type':nat, 'value':10000000000}])
+    # print('res1:'+ res1.hex())
 
-    principal = PrincipalClass()
-    res2 = encode([{'type': principal, 'value':'aaaaa-aa'}])
-    print('res2' + res2.hex())
+    # principal = PrincipalClass()
+    # res2 = encode([{'type': principal, 'value':'aaaaa-aa'}])
+    # print('res2' + res2.hex())
 
-    res = encode([{'type': principal, 'value':'aaaaa-aa'},{'type':nat, 'value':10000000000}])
-    print('res:' + res.hex())
+    # res = encode([{'type': principal, 'value':'aaaaa-aa'},{'type':nat, 'value':10000000000}])
+    # print('res:' + res.hex())
 
     # data = b'DIDL\x00\x01q\x08XTC Test'
     # print('decode data: {}'.format(data))
@@ -1214,9 +1216,24 @@ if __name__ == "__main__":
     # out = decode(data)
     # print(out)
 
+    # record
+    # record = Types.Record({'foo':Types.Text, 'bar': Types.Int})
+    # res = encode([{'type': record, 'value':{'foo': '💩', 'bar': 42}}])
+    # print('expected:', '4449444c016c02d3e3aa027c868eb7027101002a04f09f92a9')
+    # print('current:', res.hex())
 
-    record = Types.Record({'foo':Types.Text, 'bar': Types.Int})
-    res = encode([{'type': record, 'value':{'foo': '💩', 'bar': 42}}])
-    print('4449444c016c02d3e3aa027c868eb7027101002a04f09f92a9')
-    print(res.hex())
+    # tuple(Int, Nat)
+    # tup = Types.Tuple(Types.Int, Types.Text)
+    # res = encode([{'type': tup, 'value': [42, '💩']}])
+    # print('expected:', '4449444c016c02007c017101002a04f09f92a9')
+    # print('current:', res.hex())
+    # data = bytes.fromhex('4449444c016c02007c017101002a04f09f92a9')
+    # print(decode(data))
+
+    # variant
+    tup = Types.Variant({'ok': Types.Text, 'err': Types.Text})
+    res = encode([{'type': tup, 'value': {'ok': 'good'}}])
+    print('expected:', '4449444c016b029cc20171e58eb4027101000004676f6f64')
+    print('current:', res.hex())
     print(decode(res))
+    

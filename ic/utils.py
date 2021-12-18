@@ -1,3 +1,4 @@
+import re
 import leb128
 import hashlib
 
@@ -17,6 +18,10 @@ def encode_list(l):
 # used for sort record by key
 def labelHash(s:str) -> int:
     #TODO input regulatization
+    if '_' in s:
+        num = int(s[1])
+        if num >= 0 and num < 2**32:
+            return num
     h = 0
     for c in s.encode():
         h = (h * 223 + c) % 2 ** 32
