@@ -7,8 +7,8 @@ from struct import pack,unpack
 from abc import abstractclassmethod, ABCMeta
 from enum import Enum
 import math
-from .principal import Principal as P
-from .utils import labelHash
+from principal import Principal as P
+from utils import labelHash
 
 class TypeIds(Enum):
     Null = -1
@@ -38,7 +38,7 @@ class TypeIds(Enum):
 
 prefix = "DIDL"
 
-# todo
+# TODO
 class Pipe :
     def __init__(self, buffer = b'', length = 0):
         self._buffer = buffer
@@ -90,11 +90,11 @@ class TypeTable():
         self._typs.append(buf)
 
     def merge(self, obj: ConstructType, knot:str):
-        idx = self._idx[obj.name] if self.has(obj) else 'undefined'
-        knotIdx = self._idx[knot] if knot in self._idx else 'undefined'
-        if idx == 'undefined':
+        idx = self._idx[obj.name] if self.has(obj) else None
+        knotIdx = self._idx[knot] if knot in self._idx else None
+        if idx == None:
             raise "Missing type index for " + obj.name
-        if knotIdx == 'undefined':
+        if knotIdx == None:
             raise "Missing type index for " + knot
         self._typs[idx] = self._typs[knotIdx]
 
@@ -110,7 +110,7 @@ class TypeTable():
     def indexOf(self, typeName:str) :
         if not typeName in self._idx:
             raise "Missing type index for" + typeName
-        return leb128.u.encode(self._idx[typeName] | 0)
+        return leb128.i.encode(self._idx[typeName] | 0)
 
 
  # Represents an IDL type.
@@ -145,10 +145,10 @@ class PrimitiveType(Type):
     def __init__(self) -> None:
         super().__init__()
 
-    def checkType(self, type: Type):
-        if self.name != type.name :
-            raise "type mismatch: type on the wire {}, expect type {}".format(type.name, self.name)
-        return type
+    def checkType(self, t: Type):
+        if self.name != t.name :
+            raise "type mismatch: type on the wire {}, expect type {}".format(t.name, self.name)
+        return t
 
     def _buildTypeTableImpl(self, typeTable: TypeTable) :
         # No type table encoding for Primitive types.
@@ -158,9 +158,9 @@ class ConstructType(Type, metaclass=ABCMeta):
     def __init__(self) -> None:
         super().__init__()
 
-    def checkType(self, type: Type) -> ConstructType :
-        if isinstance(type, RecClass):
-            ty = type.getType()
+    def checkType(self, t: Type) -> ConstructType :
+        if isinstance(t, RecClass):
+            ty = t.getType()
             if ty == None:
                 raise "type mismatch with uninitialized type"
             return ty
@@ -677,7 +677,7 @@ class RecordClass(ConstructType):
         x = {}
         idx = 0
         keys = list(self._fields.keys())
-        for k, v in record._fields :
+        for k, v in record._fields.items() :
             if idx >= len(self._fields) or ( labelHash(keys[idx]) != labelHash(k) ):
                 # skip field
                 v.decodeValue(b, v)
@@ -692,7 +692,7 @@ class RecordClass(ConstructType):
 
     @property
     def name(self) -> str:
-        return "record {}".format(self._fields)
+        return "record"
 
     @property
     def id(self) -> int:
@@ -736,9 +736,9 @@ class TupleClass(RecordClass):
 
     def decodeValue(self, b: Pipe, t: Type):
         tup = self.checkType(t)
-        if not isinstance(tup, ConstructType):
+        if not isinstance(tup, TupleClass):
             raise "not a tuple type"
-        if len(tup._components) != self._components:
+        if len(tup._components) != len(self._components):
             raise "tuple mismatch"
         res = []
         for i, wireType in enumerate(tup._components):
@@ -746,7 +746,7 @@ class TupleClass(RecordClass):
                 wireType.decodeValue(b, wireType)
             else:
                 res.append(self._components[i].decodeValue(b, wireType))
-        return b''.join(res)
+        return res
 
     @property
     def id(self) -> int:
@@ -957,14 +957,10 @@ def readTypeTable(pipe):
     # contruct type todo
     for _ in range(typeTable_len):
         ty = leb128.i.decode(safeReadByte(pipe))
-        if ty  == TypeIds.Opt.value:
-            pass
-        elif ty == TypeIds.Vec.value:
+        if ty == TypeIds.Opt.value or ty == TypeIds.Vec.value:
             t = leb128.i.decode(safeReadByte(pipe))
             typeTable.append([ty, t])
-        elif ty == TypeIds.Record.value:
-            pass
-        elif ty == TypeIds.Variant.value:
+        elif ty == TypeIds.Record.value or ty == TypeIds.Variant.value:
             fields = []
             objLength = lenDecode(pipe)
             prevHash = -1
@@ -979,8 +975,10 @@ def readTypeTable(pipe):
                 fields.append([hash, t])
             typeTable.append([ty, fields])
         elif ty == TypeIds.Func.value:
+            # TODO
             pass
         elif ty == TypeIds.Service.value:
+            # TODO
             pass
         else:
             raise "Illegal op_code: {}".format(ty)
@@ -1057,18 +1055,16 @@ def buildType(rawTable, table, entry):
         return Types.Opt(t)
     elif ty == TypeIds.Record.value:
         fields = {}
-        for hash , t in entry[1].items():
+        for hash , t in entry[1]:
             name = '_' + str(hash)
             if t >= len(rawTable):
                 raise "type index out of range"
-            temp = getType(t)
-            if temp == None:
-                temp = table[t]
+            temp = getType(rawTable, table, t)
             fields[name] = temp
         record = Types.Record(fields)
         tup = record.tryAsTuple()
         if type(tup) == list:
-            return Types.Tuple(tup)
+            return Types.Tuple(*tup)
         else:
             return record
     elif ty == TypeIds.Variant.value:
@@ -1132,7 +1128,8 @@ def decode(retTypes, data):
     rawTable, rawTypes = readTypeTable(b)
     if type(retTypes) != list:
         retTypes = [retTypes]
-
+    if len(rawTypes) < len(retTypes):
+        raise "Wrong number of return value"
     table = [Types.Rec] * len(rawTable)
 
     for i, entry in enumerate(rawTable):
@@ -1225,6 +1222,7 @@ if __name__ == "__main__":
     # res = encode([{'type': record, 'value':{'foo': '💩', 'bar': 42}}])
     # print('expected:', '4449444c016c02d3e3aa027c868eb7027101002a04f09f92a9')
     # print('current:', res.hex())
+    # print(decode(record, res))
 
     # tuple(Int, Nat)
     # tup = Types.Tuple(Types.Int, Types.Text)
@@ -1234,9 +1232,17 @@ if __name__ == "__main__":
     # print(decode(tup, res))
 
     # variant
+    # tup = Types.Variant({'ok': Types.Text, 'err': Types.Text})
+    # res = encode([{'type': tup, 'value': {'ok': 'good'} }])
+    # print('expected:', '4449444c016b03017e9cc20171e58eb4027101000104676f6f64')
+    # print('current:', res.hex())
+    # print(decode(tup, res))
+    
+    # tuple(variant)
     tup = Types.Tuple(Types.Variant({'ok': Types.Text, 'err': Types.Text}))
     res = encode([{'type': tup, 'value': [{'ok': 'good'}] }])
     print('expected:', '4449444c026b029cc20171e58eb402716c01000001010004676f6f64')
     print('current:', res.hex())
     print(decode(tup, res))
-    
+    # data = b'DIDL\x02k\x02\x9c\xc2\x01}\xe5\x8e\xb4\x02\x01k\x03\xb5\xda\x9a\xa3\x03\x7f\xb9\xd6\xc8\x94\x06\x7f\xd4\xb4\xc5\x9a\t\x7f\x01\x00\x00\x9e\x01'
+    # print(decode(tup, data))
