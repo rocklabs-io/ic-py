@@ -28,7 +28,7 @@ def getType(method:str):
     elif method == 'balanceOf':
         return Types.Nat
     elif method == 'transfer':
-        return Types.Nat
+        return Types.Variant({'ok': Types.Nat, 'err': Types.Variant})
     else:
         pass
 

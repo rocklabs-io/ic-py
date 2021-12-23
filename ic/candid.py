@@ -7,8 +7,8 @@ from struct import pack,unpack
 from abc import abstractclassmethod, ABCMeta
 from enum import Enum
 import math
-from principal import Principal as P
-from utils import labelHash
+from .principal import Principal as P
+from .utils import labelHash
 
 class TypeIds(Enum):
     Null = -1
@@ -834,10 +834,11 @@ class VariantClass(ConstructType):
 
 # Represents a reference to an IDL type, used for defining recursive data types.
 class RecClass(ConstructType):
+    _counter = 0
     def __init__(self):
         super().__init__()
-        self._counter = 0
-        self._id = self._counter + 1
+        self._id = RecClass._counter
+        RecClass._counter += 1
         self._type = None
 
     def fill(self, t: ConstructType):
@@ -859,7 +860,7 @@ class RecClass(ConstructType):
         if self._type == None:
             raise "Recursive type uninitialized"
         else:
-            typeTable.add(self, b'')
+            typeTable.add(self, b'') # check b'' or []
             self._type.buildTypeTable(typeTable)
             typeTable.merge(self, self._type.name)
 
@@ -873,6 +874,7 @@ class RecClass(ConstructType):
     @property
     def name(self) -> str:
         return 'rec_{}'.format(self._id)
+
 
     def display(self):
         if self._type == None:
@@ -1074,8 +1076,6 @@ def buildType(rawTable, table, entry):
             if t >= len(rawTable):
                 raise "type index out of range"
             temp = getType(rawTable, table, t)
-            if temp == None:
-                temp = table[t]
             fields[name] = temp
         return Types.Variant(fields)
     # elif TypeIds.Func.value:
@@ -1130,7 +1130,10 @@ def decode(retTypes, data):
         retTypes = [retTypes]
     if len(rawTypes) < len(retTypes):
         raise "Wrong number of return value"
-    table = [Types.Rec] * len(rawTable)
+    
+    table = []
+    for _ in range(len(rawTable)):
+        table.append(Types.Rec())
 
     for i, entry in enumerate(rawTable):
         t = buildType(rawTable, table, entry)
@@ -1168,7 +1171,6 @@ class Types():
     Nat16 =  FixedNatClass(16)
     Nat32 =  FixedNatClass(32)
     Nat64 =  FixedNatClass(64)
-    Rec = RecClass()
 
     def Tuple(*types):
         return TupleClass(*types)
@@ -1184,6 +1186,9 @@ class Types():
 
     def Variant(fields):
         return VariantClass(fields)
+    
+    def Rec():
+        return RecClass()
 
     # not supported yet
     '''
@@ -1239,10 +1244,11 @@ if __name__ == "__main__":
     # print(decode(tup, res))
     
     # tuple(variant)
-    tup = Types.Tuple(Types.Variant({'ok': Types.Text, 'err': Types.Text}))
-    res = encode([{'type': tup, 'value': [{'ok': 'good'}] }])
-    print('expected:', '4449444c026b029cc20171e58eb402716c01000001010004676f6f64')
-    print('current:', res.hex())
-    print(decode(tup, res))
-    # data = b'DIDL\x02k\x02\x9c\xc2\x01}\xe5\x8e\xb4\x02\x01k\x03\xb5\xda\x9a\xa3\x03\x7f\xb9\xd6\xc8\x94\x06\x7f\xd4\xb4\xc5\x9a\t\x7f\x01\x00\x00\x9e\x01'
-    # print(decode(tup, data))
+    # tup = Types.Tuple(Types.Variant({'ok': Types.Text, 'err': Types.Text}))
+    # res = encode([{'type': tup, 'value': [{'ok': 'good'}] }])
+    # print('expected:', '4449444c026b029cc20171e58eb402716c01000001010004676f6f64')
+    # print('current:', res.hex())
+    # print(decode(tup, res))
+    ty = Types.Variant({'ok': Types.Nat, 'err': Types.Variant})
+    data = b'DIDL\x02k\x02\x9c\xc2\x01}\xe5\x8e\xb4\x02\x01k\x03\xb5\xda\x9a\xa3\x03\x7f\xb9\xd6\xc8\x94\x06\x7f\xd4\xb4\xc5\x9a\t\x7f\x01\x00\x00\x9e\x01'
+    print(decode(ty, data))
