@@ -1118,7 +1118,8 @@ def encode(params):
     return pre + table + length + typs + vals
 
 # decode a bytes value
-def decode(retTypes, data):
+# def decode(retTypes, data):
+def decode(data, retTypes=None):
     b = Pipe(data)
     if len(data) < len(prefix):
         raise "Message length smaller than prefix number"
@@ -1126,10 +1127,11 @@ def decode(retTypes, data):
     if prefix_buffer != prefix:
         raise "Wrong prefix:" + prefix_buffer + 'expected prefix: DIDL'
     rawTable, rawTypes = readTypeTable(b)
-    if type(retTypes) != list:
-        retTypes = [retTypes]
-    if len(rawTypes) < len(retTypes):
-        raise "Wrong number of return value"
+    if retTypes:
+        if type(retTypes) != list:
+            retTypes = [retTypes]
+        if len(rawTypes) < len(retTypes):
+            raise "Wrong number of return value"
     
     table = []
     for _ in range(len(rawTable)):
@@ -1143,8 +1145,7 @@ def decode(retTypes, data):
     for t in rawTypes:
         types.append(getType(rawTable, table, t))
     outputs = []
-    for i, t in enumerate(retTypes):
-        # outputs[i.name] = i.decodeValue(b, i)
+    for i, t in enumerate(types):
         outputs.append({
             'type': t.name,
             'value': t.decodeValue(b, types[i])

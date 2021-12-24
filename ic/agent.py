@@ -30,7 +30,8 @@ def getType(method:str):
     elif method == 'transfer':
         return Types.Variant({'ok': Types.Nat, 'err': Types.Variant})
     else:
-        pass
+        # pass
+        return Types.Nat
 
 class Agent:
     def __init__(self, identity, client, nonce_factory=None, ingress_expiry=300, root_key=IC_ROOT_KEY):
@@ -70,8 +71,7 @@ class Agent:
         _, data = sign_request(req, self.identity)
         result = self.query_endpoint(canister_id, data)
         if result['status'] == 'replied':
-            method_type = getType(method_name)
-            arg = decode(method_type, result['reply']['arg'])
+            arg = decode(result['reply']['arg'])
             return arg
         elif result['status'] == 'rejected':
             return result['reject_message']
@@ -87,11 +87,9 @@ class Agent:
         }
         req_id, data = sign_request(req, self.identity)
         _ = self.call_endpoint(canister_id, req_id, data)
-        print('update.req_id:', req_id.hex())
-        # poll req_id status to get result
+        # print('update.req_id:', req_id.hex())
         result = self.poll(canister_id, req_id)
-        method_type = getType(method_name)
-        return decode(method_type, result)
+        return decode(result)
 
     def read_state_raw(self, canister_id, paths):
         req = {
@@ -111,7 +109,6 @@ class Agent:
             ['request_status'.encode(), req_id],
         ]
         cert = self.read_state_raw(canister_id, paths)
-        #print(cert)
         status = lookup(['request_status'.encode(), req_id, 'status'.encode()], cert)
         if (status == None):
             return status, cert
