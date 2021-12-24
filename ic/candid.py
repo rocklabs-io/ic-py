@@ -1044,14 +1044,14 @@ def buildType(rawTable, table, entry):
     if ty == TypeIds.Vec.value:
         if ty >= len(rawTable):
             raise "type index out of range"
-        t = getType(entry[1])
+        t = getType(rawTable, table, entry[1])
         if t == None:
             t = table[t]
         return Types.Vec(t)
     elif ty == TypeIds.Opt.value:
         if ty >= len(rawTable):
             raise "type index out of range"
-        t = getType(entry[1])
+        t = getType(rawTable, table, entry[1])
         if t == None:
             t = table[t]
         return Types.Opt(t)
