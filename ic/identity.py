@@ -1,8 +1,9 @@
 import hashlib
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, PublicFormat, NoEncryption, load_pem_private_key
+from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, PublicFormat, NoEncryption
 from cryptography.hazmat.primitives.asymmetric import ed25519, ec
 from .principal import Principal
+from .der import unpem
 
 class Identity:
     def __init__(self, privkey = "", type = "ed25519", anonymous = False):
@@ -31,9 +32,8 @@ class Identity:
             raise 'unsupported identity type'
 
     @staticmethod
-    def from_pem(pem: str):
-        key = load_pem_private_key(pem.encode(), password=None)
-        privkey = key.private_bytes(encoding=Encoding.Raw, format=PrivateFormat.Raw, encryption_algorithm=NoEncryption()).hex()
+    def from_pem(pem):
+        privkey, _ = unpem(pem)
         return Identity(privkey=privkey, type='ed25519')
 
     def to_pem(self):
