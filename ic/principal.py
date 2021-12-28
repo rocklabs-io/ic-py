@@ -32,7 +32,7 @@ class Principal:
     @staticmethod
     def self_authenticating(pubkey):
         if isinstance(pubkey, str):
-            pubkey = pubkey.encode()
+            pubkey = bytes.fromhex(pubkey)
         hash_ = hashlib.sha224(pubkey).digest()
         hash_ += bytes([PrincipalClass.SelfAuthenticating.value])
         return Principal(bytes = hash_)
