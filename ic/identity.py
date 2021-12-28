@@ -3,6 +3,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, PublicFormat, NoEncryption, load_pem_private_key
 from cryptography.hazmat.primitives.asymmetric import ed25519, ec
 from .principal import Principal
+from .keys_adapted import SigningKeyApapted
+import ecdsa
 
 class Identity:
     def __init__(self, privkey = "", type = "ed25519", anonymous = False):
@@ -12,32 +14,34 @@ class Identity:
             return
         self.key_type = type
         if type == 'secp256k1':
-            self.sk = ec.generate_private_key(ec.SECP256K1())
-            self.vk = self.sk.public_key()
-            self._privkey = self.sk.private_bytes(encoding=Encoding.DER, format=PrivateFormat.TraditionalOpenSSL, encryption_algorithm=NoEncryption()).hex()
-            self._pubkey = self.vk.public_bytes(encoding=Encoding.DER, format=PublicFormat.SubjectPublicKeyInfo).hex()
-            self._der_pubkey = self.vk.public_bytes(encoding=Encoding.DER, format=PublicFormat.SubjectPublicKeyInfo)
+            if len(privkey) > 0:
+                self.sk = ecdsa.SigningKey.from_string(privkey, curve=ecdsa.SECP256k1, hashfunc=hashlib.sha256)
+            else:
+                self.sk = ecdsa.SigningKey.generate(curve=ecdsa.SECP256k1, hashfunc=hashlib.sha256)
+            self._privkey = self.sk.to_string().hex()
+            self.vk = self.sk.get_verifying_key()
+            self._pubkey = self.vk.to_string().hex()
+            self._der_pubkey = self.vk.to_der()
         elif type == 'ed25519':
             if len(privkey) > 0:
-                self.sk = ed25519.Ed25519PrivateKey.from_private_bytes(privkey)
+                self.sk = ecdsa.SigningKey.from_string(privkey, curve=ecdsa.Ed25519)
             else:
-                self.sk = ed25519.Ed25519PrivateKey.generate()
-            self.vk = self.sk.public_key()
-            self._privkey = self.sk.private_bytes(encoding=Encoding.Raw, format=PrivateFormat.Raw, encryption_algorithm=NoEncryption()).hex()
-            self._pubkey = self.vk.public_bytes(encoding=Encoding.Raw, format=PublicFormat.Raw).hex()
-            # der encoded public key, bytes
-            self._der_pubkey = self.vk.public_bytes(encoding=Encoding.DER, format=PublicFormat.SubjectPublicKeyInfo)
+                self.sk = ecdsa.SigningKey.generate(curve=ecdsa.Ed25519)
+            self._privkey = self.sk.to_string().hex()
+            self.vk = self.sk.get_verifying_key()
+            self._pubkey = self.vk.to_string().hex()
+            self._der_pubkey = self.vk.to_der()
         else:
             raise 'unsupported identity type'
 
     @staticmethod
     def from_pem(pem: str):
-        key = load_pem_private_key(pem.encode(), password=None)
-        privkey = key.private_bytes(encoding=Encoding.Raw, format=PrivateFormat.Raw, encryption_algorithm=NoEncryption()).hex()
+        key = SigningKeyApapted.from_pem(pem)
+        privkey = key.to_string().hex()
         return Identity(privkey=privkey, type='ed25519')
 
     def to_pem(self):
-        pem = self.sk.private_bytes(encoding=Encoding.PEM, format=PrivateFormat.PKCS8, encryption_algorithm=NoEncryption())
+        pem = self.sk.to_pem(format="pkcs8")
         return pem
 
     def sender(self):
@@ -52,7 +56,7 @@ class Identity:
             sig = self.sk.sign(msg)
             return (self._der_pubkey, sig)
         elif self.key_type == 'secp256k1':
-            sig = self.sk.sign(msg, ec.ECDSA(hashes.SHA256()))
+            sig = self.sk.sign(msg)
             return (self._der_pubkey, sig)
 
     @property
