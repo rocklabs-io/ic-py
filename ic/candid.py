@@ -588,7 +588,7 @@ class OptClass(ConstructType):
 
     def _buildTypeTableImpl(self, typeTable: TypeTable):
         self._type.buildTypeTable(typeTable)
-        opCode = leb128.u.encode(TypeIds.Opt.value)
+        opCode = leb128.i.encode(TypeIds.Opt.value)
         buffer = self._type.encodeType(typeTable)
         typeTable.add(self, opCode + buffer)
 
@@ -596,9 +596,10 @@ class OptClass(ConstructType):
         opt = self.checkType(t)
         if not isinstance(opt, OptClass):
             raise "Not an option type"
-        if safeReadByte(b) == b'\x00':
+        flag = safeReadByte(b)
+        if flag == b'\x00':
             return []
-        elif safeReadByte(b) == b'\x01':
+        elif flag == b'\x01':
             return [self._type.decodeValue(b, opt._type)]
         else:
             raise "Not an option value"
@@ -1249,4 +1250,19 @@ if __name__ == "__main__":
     print('expected:', '4449444c016d7c01000400010203')
     print('current :', res.hex())
     print('decode Vec:', decode(res, vec))
+ 
+    # Principle
+    Prin = Types.Principal
+    param = 'expmt-gtxsw-inftj-ttabj-qhp5s-nozup-n3bbo-k7zvn-dg4he-knac3-lae'
+    res = encode([{'type': Prin, 'value': param}])
+    print('current :', res.hex())
+    print('decode Principal:', decode(res))
+
+    # Opt principal
+    Prin = Types.Opt(Types.Principal)
+    param = ['expmt-gtxsw-inftj-ttabj-qhp5s-nozup-n3bbo-k7zvn-dg4he-knac3-lae']
+    res = encode([{'type': Prin, 'value': param}])
+    print('current :', res.hex())
+    print('decode Principal:', decode(res, Prin))
     '''
+

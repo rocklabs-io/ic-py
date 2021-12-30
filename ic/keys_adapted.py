@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from ecdsa import der
 from ecdsa import SigningKey
 from six import b
@@ -191,3 +192,8 @@ class SigningKeyApapted(SigningKey):
                 b("\x00") * (curve.baselen - len(privkey_str)) + privkey_str
             )
         return cls.from_string(privkey_str, curve, hashfunc)
+
+
+if __name__ == '__main__':
+    pem = '-----BEGIN PRIVATE KEY-----MFMCAQEwBQYDK2VwBCIEIGQqNAZlORmn1k4QrYz1FvO4fOQowS3GXQMqRKDzmx9PoSMDIQCrO5iGM5hnLWrHavywoXekAoXPpYRuB0Dr6DjZF6FZkg==-----END PRIVATE KEY-----'
+    SigningKeyApapted.from_pem(pem)
