@@ -447,9 +447,9 @@ class FixedIntClass(PrimitiveType):
         elif self._bits == 16:
             return unpack('h', by)[0] # short -> Int16
         elif self._bits == 32:
-            return unpack('i', by) # int -> Int32
+            return unpack('i', by)[0] # int -> Int32
         elif self._bits == 64:
-            return unpack('q', by) # long long -> Int64
+            return unpack('q', by)[0] # long long -> Int64
         else:
             raise "bits only support 8, 16, 32, 64"
 
@@ -509,9 +509,9 @@ class FixedNatClass(PrimitiveType):
         elif self._bits == 16:
             return unpack('H', by)[0] # unsigned short -> Nat16
         elif self._bits == 32:
-            return unpack('I', by) # unsigned int -> Nat32
+            return unpack('I', by)[0] # unsigned int -> Nat32
         elif self._bits == 64:
-            return unpack('Q', by) # unsigned long long -> Nat64
+            return unpack('Q', by)[0] # unsigned long long -> Nat64
         else:
             raise "bits only support 8, 16, 32, 64"
 
@@ -552,7 +552,7 @@ class VecClass(ConstructType):
         
     def _buildTypeTableImpl(self, typeTable: TypeTable):
         self._type.buildTypeTable(typeTable)
-        opCode = leb128.u.encode(TypeIds.Vec.value)
+        opCode = leb128.i.encode(TypeIds.Vec.value)
         buffer = self._type.encodeType(typeTable)
         typeTable.add(self, opCode + buffer)
 
@@ -570,7 +570,7 @@ class VecClass(ConstructType):
 
     @property
     def name(self) -> str:
-        return 'vec' + str(self._type.name)
+        return 'vec ({})'.format(str(self._type.name))
 
     @property
     def id(self) -> int:
@@ -1145,7 +1145,7 @@ def decode(data, retTypes=None):
     for t in rawTypes:
         types.append(getType(rawTable, table, t))
     outputs = []
-    for i, t in enumerate(types):
+    for i, t in enumerate(types if retTypes == None else retTypes):
         outputs.append({
             'type': t.name,
             'value': t.decodeValue(b, types[i])
@@ -1199,57 +1199,62 @@ class Types():
         return ServiceClass(t)
     '''
 
-
-
 if __name__ == "__main__":
-    # nat = NatClass()
-    # res1 = encode([{'type':nat, 'value':10000000000}])
-    # print('res1:'+ res1.hex())
+    '''
+    nat = NatClass()
+    res1 = encode([{'type':nat, 'value':10000000000}])
+    print('res1:'+ res1.hex())
 
-    # principal = PrincipalClass()
-    # res2 = encode([{'type': principal, 'value':'aaaaa-aa'}])
-    # print('res2' + res2.hex())
+    principal = PrincipalClass()
+    res2 = encode([{'type': principal, 'value':'aaaaa-aa'}])
+    print('res2' + res2.hex())
 
-    # res = encode([{'type': principal, 'value':'aaaaa-aa'},{'type':nat, 'value':10000000000}])
-    # print('res:' + res.hex())
+    res = encode([{'type': principal, 'value':'aaaaa-aa'},{'type':nat, 'value':10000000000}])
+    print('res:' + res.hex())
 
-    # data = b'DIDL\x00\x01q\x08XTC Test'
-    # print('decode data: {}'.format(data))
-    # out = decode(data)
-    # print(out)
+    data = b'DIDL\x00\x01q\x08XTC Test'
+    print('decode data: {}'.format(data))
+    out = decode(data)
+    print(out)
 
-    # data = b'DIDL\x00\x01}\xe2\x82\xac\xe2\x82\xac\xe2\x80'
-    # print('decode data: {}'.format(data))
-    # out = decode(data)
-    # print(out)
+    data = b'DIDL\x00\x01}\xe2\x82\xac\xe2\x82\xac\xe2\x80'
+    print('decode data: {}'.format(data))
+    out = decode(data)
+    print(out)
 
     # record
-    # record = Types.Record({'foo':Types.Text, 'bar': Types.Int})
-    # res = encode([{'type': record, 'value':{'foo': '💩', 'bar': 42}}])
-    # print('expected:', '4449444c016c02d3e3aa027c868eb7027101002a04f09f92a9')
-    # print('current:', res.hex())
-    # print(decode(record, res))
+    record = Types.Record({'foo':Types.Text, 'bar': Types.Int})
+    res = encode([{'type': record, 'value':{'foo': '💩', 'bar': 42}}])
+    print('expected:', '4449444c016c02d3e3aa027c868eb7027101002a04f09f92a9')
+    print('current:', res.hex())
+    print(decode(res, record))
 
     # tuple(Int, Nat)
-    # tup = Types.Tuple(Types.Int, Types.Text)
-    # res = encode([{'type': tup, 'value': [42, '💩']}])
-    # print('expected:', '4449444c016c02007c017101002a04f09f92a9')
-    # print('current:', res.hex())
-    # print(decode(tup, res))
+    tup = Types.Tuple(Types.Int, Types.Text)
+    res = encode([{'type': tup, 'value': [42, '💩']}])
+    print('expected:', '4449444c016c02007c017101002a04f09f92a9')
+    print('current:', res.hex())
+    print(decode(res, tup))
 
     # variant
-    # tup = Types.Variant({'ok': Types.Text, 'err': Types.Text})
-    # res = encode([{'type': tup, 'value': {'ok': 'good'} }])
-    # print('expected:', '4449444c016b03017e9cc20171e58eb4027101000104676f6f64')
-    # print('current:', res.hex())
-    # print(decode(tup, res))
+    tup = Types.Variant({'ok': Types.Text, 'err': Types.Text})
+    res = encode([{'type': tup, 'value': {'ok': 'good'} }])
+    print('expected:', '4449444c016b03017e9cc20171e58eb4027101000104676f6f64')
+    print('current:', res.hex())
+    print(decode(res, tup))
     
     # tuple(variant)
-    # tup = Types.Tuple(Types.Variant({'ok': Types.Text, 'err': Types.Text}))
-    # res = encode([{'type': tup, 'value': [{'ok': 'good'}] }])
-    # print('expected:', '4449444c026b029cc20171e58eb402716c01000001010004676f6f64')
-    # print('current:', res.hex())
-    # print(decode(tup, res))
-    ty = Types.Variant({'ok': Types.Nat, 'err': Types.Variant})
-    data = b'DIDL\x02k\x02\x9c\xc2\x01}\xe5\x8e\xb4\x02\x01k\x03\xb5\xda\x9a\xa3\x03\x7f\xb9\xd6\xc8\x94\x06\x7f\xd4\xb4\xc5\x9a\t\x7f\x01\x00\x00\x9e\x01'
-    print(decode(ty, data))
+    tup = Types.Tuple(Types.Variant({'ok': Types.Text, 'err': Types.Text}))
+    res = encode([{'type': tup, 'value': [{'ok': 'good'}] }])
+    print('expected:', '4449444c026b029cc20171e58eb402716c01000001010004676f6f64')
+    print('current:', res.hex())
+    print(decode(res, tup))
+
+    # Vec
+    vec = Types.Vec(Types.Nat64)
+    param = [0, 1, 2, 3]
+    res = encode([{'type': vec, 'value': param}])
+    print('expected:', '4449444c016d7c01000400010203')
+    print('current :', res.hex())
+    print('decode Vec:', decode(res, vec))
+    '''
