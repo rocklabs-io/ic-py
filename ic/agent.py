@@ -89,7 +89,7 @@ class Agent:
         _ = self.call_endpoint(canister_id, req_id, data)
         # print('update.req_id:', req_id.hex())
         result = self.poll(canister_id, req_id)
-        return decode(result)
+        return result
 
     def read_state_raw(self, canister_id, paths):
         req = {
@@ -125,6 +125,6 @@ class Agent:
         if status == 'replied':
             path = ['request_status'.encode(), req_id, 'reply'.encode()]
             res = lookup(path, cert)
-            return res
+            return decode(res)
         else:
             return status
