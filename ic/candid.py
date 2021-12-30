@@ -535,18 +535,12 @@ class VecClass(ConstructType):
     def __init__(self, _type: Type):
         super().__init__()
         self._type = _type
-        # If true, this vector is really a blob and we can just use memcpy.
-        self._blobOptimization = False
-        if isinstance(_type, FixedNatClass) and _type._bits == 8:
-            self._blobOptimization = True
 
     def covariant(self, x):
         return type(x) == list and not False in list(map(self._type.covariant, x))
     
     def encodeValue(self, val):
         length = leb128.u.encode(len(val))
-        if self._blobOptimization:
-            return length + b''.join(val)
         vec = list(map(self._type.encodeValue, val))
         return length + b''.join(vec)
         
@@ -561,8 +555,6 @@ class VecClass(ConstructType):
         if not isinstance(vec, VecClass):
             raise "Not a vector type"
         length = lenDecode(b)
-        if self._blobOptimization:
-            return b.read(length)
         rets = []
         for _ in range(length):
             rets.append(self._type.decodeValue(b, vec._type))
