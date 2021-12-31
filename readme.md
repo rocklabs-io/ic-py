@@ -116,3 +116,5 @@ result = agent.update_raw("gvbup-jyaaa-aaaah-qcdwa-cai", "transfer", encode(para
 4. client: http client [Done]
 5. agent: ic agent to communicate with canisters on ic [WIP]
 6. canister: canister class, initialized with canister id and did file [WIP]
+7. common canister interfaces: ledger, management, nns, cycles wallet [WIP]
+8. automated testing [WIP]
