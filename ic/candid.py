@@ -236,13 +236,13 @@ class NullClass(PrimitiveType):
     def covariant(self, x):
         return x == None
     
-    def encodeValue(self):
+    def encodeValue(self, val):
         return b''
 
     def encodeType(self, typeTable: TypeTable):
         return leb128.i.encode(TypeIds.Null.value)
 
-    def decodeValue(self, t: Type):
+    def decodeValue(self, b: Pipe, t: Type):
         self.checkType(t)
         return None
 
@@ -1264,5 +1264,13 @@ if __name__ == "__main__":
     res = encode([{'type': Prin, 'value': param}])
     print('current :', res.hex())
     print('decode Principal:', decode(res, Prin))
+    
+    # NULL
+    Prin = Types.Null
+    param = None
+    res = encode([{'type': Prin, 'value': param}])
+    print('current :', res.hex())
+    print('decode Null:', decode(res, Prin))
+
     '''
 
