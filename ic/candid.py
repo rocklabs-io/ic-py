@@ -1,4 +1,4 @@
-# candid.test.py shows how to use candid's en/decode
+# candid.example.py shows how to use candid's en/decode
 
 import leb128
 from struct import pack,unpack
