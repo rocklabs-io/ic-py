@@ -36,7 +36,6 @@ class TypeIds(Enum):
 
 prefix = "DIDL"
 
-# TODO
 class Pipe :
     def __init__(self, buffer = b'', length = 0):
         self._buffer = buffer
@@ -65,12 +64,6 @@ class Pipe :
         res = self._view[0]
         self._view = self._view[1:]
         return res
-
-    def write(buf):
-        pass
-    
-    def alloc(amount):
-        pass
 
 
 class ConstructType: pass
@@ -614,7 +607,6 @@ class OptClass(ConstructType):
         return 'opt ({})'.format(self._type.display())
 
 # Represents an IDL Record
-# todo
 class RecordClass(ConstructType):
     def __init__(self, field: dict):
         super().__init__()
@@ -696,7 +688,6 @@ class RecordClass(ConstructType):
         return "record {}".format(d)
 
 # Represents Tuple, a syntactic sugar for Record.
-# todo
 class TupleClass(RecordClass):
     def __init__(self, *_components):
         x = {}
@@ -750,7 +741,6 @@ class TupleClass(RecordClass):
         return "record {" + '{}'.format(';'.join(d)) + '}'
 
 # Represents an IDL Variant
-# todo
 class VariantClass(ConstructType):
     def __init__(self, field):
         super().__init__()
@@ -918,7 +908,151 @@ class PrincipalClass(PrimitiveType):
     def id(self) -> int:
         return TypeIds.Principal.value
 
-# TODO class FunClass and ServiceClass
+#Represents an IDL Func reference
+class FuncClass(ConstructType):
+    def __init__(self, argTypes: list, retTypes: list, annotations: list):
+        super().__init__()
+        self.argTypes = argTypes
+        self.retTypes = argTypes
+        self.annotations = annotations
+
+    def covariant(self, x):
+        return type(x) == list and len(x) == 2 and x[0] and \
+            (P.from_str(x[0]) if type(x[0]) == str else P.from_hex(x[0].hex())).isPrincipal \
+            and type(x[1]) == str
+ 
+    def encodeValue(self, vals):
+        principal = vals[0]
+        methodName = vals[1]
+        tag = int.to_bytes(1, 1, byteorder='big')
+        if isinstance(principal, str):
+            buf = P.from_str(principal).bytes
+        elif isinstance(principal, bytes):
+            buf = principal
+        else:
+            raise ValueError("Principal should be string or bytes.")
+        l = leb128.u.encode(len(buf))
+        canister = tag + l + buf
+
+        method = methodName.encode()
+        methodLen = leb128.u.encode(len(method))
+        return tag + canister + methodLen + method
+
+    def _buildTypeTableImpl(self, typeTable: TypeTable):
+        for arg in self.argTypes:
+            arg.buildTypeTable(typeTable)
+        for ret in self.retTypes:
+            ret.buildTypeTable(typeTable)
+        
+        opCode = leb128.i.encode(TypeIds.Func.value)
+        argLen = leb128.u.encode(len(self.argTypes))
+        args = b''
+        for arg in self.argTypes:
+            args += arg.encodeType(typeTable)
+        retLen = leb128.u.encode(len(self.retTypes))
+        rets = b''
+        for ret in self.retTypes:
+            rets += ret.encodeType(typeTable)
+        annLen = leb128.u.encode(len(self.annotations))
+        anns = b''
+        for a in self.annotations:
+            anns += self._encodeAnnotation(a)
+        typeTable.add(self, opCode + argLen + args + retLen + rets + annLen + anns)
+
+    def decodeValue(self, b: Pipe, t: Type):
+        x = safeReadByte(b)
+        if leb128.u.decode(x) != 1:
+            raise ValueError('Cannot decode function reference')
+        res = safeReadByte(b)
+        if leb128.u.decode(res) != 1:
+            raise ValueError("Cannot decode principal")
+        length = leb128uDecode(b)
+        canister = P.from_hex(safeRead(b, length).hex())
+        mLen = leb128uDecode(b)
+        buf = safeRead(b, mLen)
+        method = buf.decode('utf-8')
+
+        return [canister, method]
+
+    @property
+    def name(self) -> str:
+        args = ', '.join(arg.name for arg in self.argTypes)       
+        rets = ', '.join(ret.name for ret in self.retTypes)
+        anns = ' '.join(self.annotations)
+        return '({}) → ({}) {}'.format(args, rets, anns)
+
+    @property
+    def id(self) -> int:
+        return TypeIds.Func.value
+
+    def display(self):
+        args = ', '.join(arg.display() for arg in self.argTypes)       
+        rets = ', '.join(ret.display() for ret in self.retTypes)
+        anns = ' '.join(self.annotations)
+        return '({}) → ({}) {}'.format(args, rets, anns)
+
+    def _encodeAnnotation(self, ann: str):
+        if ann == 'query':
+            return int.to_bytes(1, 1, byteorder='big')
+        elif ann == 'oneway':
+            return int.to_bytes(2, 1, byteorder='big')
+        else:
+            raise ValueError('Illeagal function annotation')
+
+# Represents an IDL Service reference
+class ServiceClass(ConstructType):
+    def __init__(self, field):
+        super().__init__()
+        self._fields = dict(sorted(field.items(), key=lambda kv: labelHash(kv[0]))) # check
+
+    def covariant(self, x):
+        if isinstance(x,str):
+            p = P.from_str(x)
+        elif isinstance(x, bytes):
+            p = P.from_hex(x.hex())
+        else:
+            raise ValueError("only support string or bytes format")
+        return p.isPrincipal
+
+    
+    def encodeValue(self, val):
+        tag = int.to_bytes(1, 1, byteorder='big')
+        if isinstance(val, str):
+            buf = P.from_str(val).bytes
+        elif isinstance(val, bytes):
+            buf = val
+        else:
+            raise ValueError("Principal should be string or bytes.")
+        l = leb128.u.encode(len(buf))
+        return tag + l + buf
+
+    def _buildTypeTableImpl(self, typeTable: TypeTable):
+        for _, v in self._fields.items():
+            v.buildTypeTable(typeTable)
+        opCode = leb128.i.encode(TypeIds.Service.value)
+        length = leb128.u.encode(len(self._fields))
+        fields = b''
+        for k, v in self._fields.items():
+            fields += leb128.u.encode(len(k.encode())) +  k.encode() + v.encodeType(typeTable)
+        typeTable.add(self, opCode + length + fields)
+
+    def decodeValue(self, b: Pipe, t: Type):
+        res = safeReadByte(b)
+        if leb128.u.decode(res) != 1:
+            raise ValueError("Cannot decode principal")
+        length = leb128uDecode(b)
+        return P.from_hex(safeRead(b, length).hex())
+
+    @property
+    def name(self) -> str:
+        fields = ''
+        for k, v in self._fields.items():
+            fields += k + ' : ' + v.name
+        return 'service {}'.format(fields)       
+
+    @property
+    def id(self) -> int:
+        return TypeIds.Service.value
 
 # through Pipe to decode bytes
 def leb128uDecode(pipe: Pipe):
@@ -954,7 +1088,6 @@ def readTypeTable(pipe):
     #types length
     typeTable = []
     typeTable_len = leb128uDecode(pipe)
-    # contruct type todo
     for _ in range(typeTable_len):
         ty = leb128iDecode(pipe)
         if ty == TypeIds.Opt.value or ty == TypeIds.Vec.value:
@@ -1085,10 +1218,10 @@ def buildType(rawTable, table, entry):
             temp = getType(rawTable, table, t)
             fields[name] = temp
         return Types.Variant(fields)
-    # elif TypeIds.Func.value:
-    #     return Types.Func([], [], [])
-    # elif TypeIds.Service.value:
-    #     return Types.Service({})
+    elif ty == TypeIds.Func.value:
+        return Types.Func([], [], [])
+    elif ty == TypeIds.Service.value:
+        return Types.Service({})
     else:
         raise ValueError("Illegal op_code: {}".format(ty))
     
@@ -1198,10 +1331,8 @@ class Types():
     def Rec():
         return RecClass()
 
-    # not supported yet
-    '''
     def Func(args, ret, annotations):
         return FuncClass(args, ret, annotations)
+
     def Service(t):
         return ServiceClass(t)
-    '''

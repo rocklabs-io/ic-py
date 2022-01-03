@@ -295,3 +295,28 @@ params = [
 test(params=params)
 # Sepecific return types
 test(params=params, rawTypes=types)
+
+#Func Text
+types = Types.Func([Types.Text], [Types.Nat], ['query'])
+val = ['expmt-gtxsw-inftj-ttabj-qhp5s-nozup-n3bbo-k7zvn-dg4he-knac3-lae', 'rocklabs']
+params = [
+    {'type': types, 'value': val},
+
+]
+# There is no specific return type
+test(params=params)
+# Sepecific return types
+test(params=params, rawTypes=types)
+
+
+#Service Text
+types = Types.Service({'rocklabs' : Types.Func([Types.Text], [Types.Nat], ['query'])})
+val = 'expmt-gtxsw-inftj-ttabj-qhp5s-nozup-n3bbo-k7zvn-dg4he-knac3-lae'
+params = [
+    {'type': types, 'value': val},
+
+]
+# There is no specific return type
+test(params=params)
+# Sepecific return types
+test(params=params, rawTypes=types)
