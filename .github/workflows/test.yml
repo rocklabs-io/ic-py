@@ -25,4 +25,4 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install --upgrade tox
-      - run: tox
+      - run: tox -v
