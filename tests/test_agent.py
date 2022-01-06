@@ -28,4 +28,4 @@ class TestAgent:
                 {'type': Types.Nat, 'value': 10000000000}
                 ])
             )
-        assert ret[0]['type'] == 'rec_0'
+        assert ret != None
