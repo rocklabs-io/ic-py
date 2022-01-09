@@ -854,7 +854,7 @@ class RecClass(ConstructType):
 
     @property
     def name(self) -> str:
-        return 'rec_{}'.format(self._id)
+        return labelHash('rec_{}'.format(self._id))
 
 
     def display(self):
