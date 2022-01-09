@@ -1,6 +1,5 @@
 import time
 import cbor2
-from cbor2 import decoder
 from waiter import wait
 from .candid import decode, Types
 from .identity import *
