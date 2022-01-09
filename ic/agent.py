@@ -1,5 +1,6 @@
 import time
 import cbor2
+from cbor2 import decoder
 from waiter import wait
 from .candid import decode, Types
 from .identity import *
@@ -59,37 +60,50 @@ class Agent:
         result = self.client.read_state(canister_id, data)
         return result
 
-    def query_raw(self, canister_id, method_name, arg):
+    def query_raw(self, canister_id, method_name, *arg):
+        assert len(arg) == 1 or len(arg) == 2
         req = {
             'request_type': "query",
             'sender': self.identity.sender().bytes,
             'canister_id': Principal.from_str(canister_id).bytes if isinstance(canister_id, str) else canister_id.bytes,
             'method_name': method_name,
-            'arg': arg,
+            'arg': arg[0],
             'ingress_expiry': self.get_expiry_date()
         }
         _, data = sign_request(req, self.identity)
         result = self.query_endpoint(canister_id, data)
         if result['status'] == 'replied':
-            arg = decode(result['reply']['arg'])
-            return arg
+            if len(arg) == 1:
+                res = decode(result['reply']['arg'])
+            else:
+                res = decode(result['reply']['arg'], arg[1])
+            return res
         elif result['status'] == 'rejected':
             return result['reject_message']
 
-    def update_raw(self, canister_id, method_name, arg):
+    def update_raw(self, canister_id, method_name, *arg):
+        assert len(arg) == 1 or len(arg) == 2
         req = {
             'request_type': "call",
             'sender': self.identity.sender().bytes,
             'canister_id': Principal.from_str(canister_id).bytes if isinstance(canister_id, str) else canister_id.bytes,
             'method_name': method_name,
-            'arg': arg,
+            'arg': arg[0],
             'ingress_expiry': self.get_expiry_date()
         }
         req_id, data = sign_request(req, self.identity)
         _ = self.call_endpoint(canister_id, req_id, data)
         # print('update.req_id:', req_id.hex())
-        result = self.poll(canister_id, req_id)
-        return result
+        status, result = self.poll(canister_id, req_id)
+        if status != 'replied':
+            return  status
+        else:
+            if len(arg) == 1:
+                res = decode(result)
+            else:
+                res = decode(result, arg[1])
+            return res
+            
 
     def read_state_raw(self, canister_id, paths):
         req = {
@@ -125,6 +139,6 @@ class Agent:
         if status == 'replied':
             path = ['request_status'.encode(), req_id, 'reply'.encode()]
             res = lookup(path, cert)
-            return decode(res)
+            return status, res
         else:
-            return status
+            return status, _

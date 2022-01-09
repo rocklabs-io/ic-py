@@ -792,7 +792,7 @@ class VariantClass(ConstructType):
         for key, expectType in self._fields.items():
             if labelHash(wireHash) == labelHash(key):
                 ret = {}
-                if not expectType:
+                if expectType:
                     value = expectType.decodeValue(b, wireType)
                 else:
                     value = None
