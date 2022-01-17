@@ -74,7 +74,7 @@ client = Client(url = "https://ic0.app")
 Encode parameters:
 
 ```python
-from ic.candid import encode, decode
+from ic.candid import encode, decode, Types
 # params is an array, return value is encoded bytes
 params = [{'type': Types.Nat, 'value': 10}]
 data = encode(params)
