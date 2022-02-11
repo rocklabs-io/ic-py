@@ -90,7 +90,7 @@ class TypeTable():
         self._typs[idx] = self._typs[knotIdx]
 
         #delete the type
-        self._typs.remove(knotIdx)
+        del self._typs[knotIdx]
         del self._idx[knot]
 
     def encode(self) :
