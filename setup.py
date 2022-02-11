@@ -16,7 +16,14 @@ setup(
     author = 'Rocklabs',
     author_email = 'ccyanxyz@gmail.com',
     keywords = 'dfinity ic agent',
-    install_requires = ['requests>=2.22.0', 'ecdsa>=0.18.0b1', 'cbor2>=5.4.2', 'leb128>=1.0.4', 'waiter>=1.2'],
+    install_requires = [
+        'requests>=2.22.0', 
+        'ecdsa>=0.18.0b1', 
+        'cbor2>=5.4.2', 
+        'leb128>=1.0.4', 
+        'waiter>=1.2',
+        'antlr4-python3-runtime==4.9.3'
+        ],
     py_modules = ['ic'],
     package_dir = { 'ic': "ic" },
     packages = setuptools.find_packages(where='./'),

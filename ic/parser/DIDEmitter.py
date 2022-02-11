@@ -1,12 +1,10 @@
-# Generated from DIDParser.g4 by ANTLR 4.9.3
-from antlr4 import *
-if __name__ is not None and "." in __name__:
-    from .DIDParser import DIDParser
-else:
-    from DIDParser import DIDParser
+from .DIDLexer import DIDLexer
+from .DIDParser import DIDParser
+from .DIDParserListener import DIDParserListener
 
-# This class defines a complete listener for a parse tree produced by DIDParser.
-class DIDParserListener(ParseTreeListener):
+class DIDEmitter(DIDParserListener):
+    def __init__(self):
+        self.xxx = {}
 
     # Enter a parse tree produced by DIDParser#program.
     def enterProgram(self, ctx:DIDParser.ProgramContext):
@@ -240,7 +238,3 @@ class DIDParserListener(ParseTreeListener):
     # Exit a parse tree produced by DIDParser#methodtype.
     def exitMethodtype(self, ctx:DIDParser.MethodtypeContext):
         pass
-
-
-
-del DIDParser
