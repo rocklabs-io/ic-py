@@ -8,3 +8,6 @@ build/
 *.egg-info
 
 .tox/
+
+.antlr
+dist/

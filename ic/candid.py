@@ -864,7 +864,7 @@ class RecClass(ConstructType):
         if self._type == None:
             raise ValueError("Recursive type uninitialized")
         else:
-            return 'μ{}.{}'.format(self.name, self._type.name)
+            return '{}.{}'.format(self.name, self._type.name)
         
 # Represents an IDL principal reference
 class PrincipalClass(PrimitiveType):
@@ -916,7 +916,7 @@ class FuncClass(ConstructType):
     def __init__(self, argTypes: list, retTypes: list, annotations: list):
         super().__init__()
         self.argTypes = argTypes
-        self.retTypes = argTypes
+        self.retTypes = retTypes
         self.annotations = annotations
 
     def covariant(self, x):
