@@ -37,7 +37,7 @@ variantfield:
 
 reftype: FUNC functype | Service actortype;
 
-functype: tuptype Arrow tuptype funcann*;
+functype: tuptype Arrow tuptype funcann?;
 
 tuptype:
 	LeftP RightP			# EmptyTuple

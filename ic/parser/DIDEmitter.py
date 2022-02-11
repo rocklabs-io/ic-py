@@ -1,240 +1,241 @@
+from ic.candid import Types
 from .DIDLexer import DIDLexer
 from .DIDParser import DIDParser
 from .DIDParserListener import DIDParserListener
 
 class DIDEmitter(DIDParserListener):
     def __init__(self):
-        self.xxx = {}
+        self.data = {
+            "nat": Types.Nat,
+            "nat8": Types.Nat8,
+            'nat16': Types.Nat16,
+            'nat32': Types.Nat32,
+            'nat64': Types.Nat64,
+            'int': Types.Int,
+            'int8': Types.Int8,
+            'int16': Types.Int16,
+            'int32': Types.Int32,
+            'int64': Types.Int64,
+            'float32': Types.Float32,
+	        'float64': Types.Float64,
+            'bool': Types.Bool,
+            'text': Types.Text,
+            'null': Types.Null,
+            'reserved': Types.Reserved,
+            'empty': Types.Empty,
+            'principal': Types.Principal
+        }
+        self.rec = {}
+        self.datatype = None
+        self.datalist = []
+        self.cache = {}
+        self.argmode = False
 
-    # Enter a parse tree produced by DIDParser#program.
-    def enterProgram(self, ctx:DIDParser.ProgramContext):
-        pass
+    def getParsedData(self, name: str):
+        return self.data[name]
+
+    def getDataType(self):
+        return self.datatype
+    
+    def getActor(self):
+        try:
+            return self.data['actor']
+        except:
+            raise KeyError("Actor not exist")
 
     # Exit a parse tree produced by DIDParser#program.
     def exitProgram(self, ctx:DIDParser.ProgramContext):
-        pass
+        self.cache.clear()
+        if len(self.rec) != 0:
+            raise ValueError("Some type undefined:" + str(self.rec))
 
-
-    # Enter a parse tree produced by DIDParser#defination.
-    def enterDefination(self, ctx:DIDParser.DefinationContext):
-        pass
 
     # Exit a parse tree produced by DIDParser#defination.
     def exitDefination(self, ctx:DIDParser.DefinationContext):
-        pass
+        typename = ctx.Name().getText()
+        if typename in self.data:
+            raise ValueError("Duplicated defination " + typename)
+        if typename in self.rec:
+            ref = self.rec[typename]
+            ref.fill(self.datatype)
+            self.data[typename] = ref
+            del self.rec[typename]
+        else:
+            self.data[typename] = self.datatype
 
-
-    # Enter a parse tree produced by DIDParser#actor.
-    def enterActor(self, ctx:DIDParser.ActorContext):
-        pass
 
     # Exit a parse tree produced by DIDParser#actor.
     def exitActor(self, ctx:DIDParser.ActorContext):
-        pass
+        if ctx.tuptype() != None:
+            args = self.cache[ctx.tuptype()]
+        else:
+            args = []
+        if ctx.actortype() != None:
+            actor = self.cache[ctx.actortype()]
+        else:
+            num = len(ctx.Name())
+            name = ctx.Name(num - 1)
+            actor = self.data[name.getText()]
+        self.datatype = {
+            "arguments": args,
+            "methods": actor
+        }
+        self.data["actor"] = self.datatype 
 
-
-    # Enter a parse tree produced by DIDParser#actortype.
-    def enterActortype(self, ctx:DIDParser.ActortypeContext):
-        pass
 
     # Exit a parse tree produced by DIDParser#actortype.
     def exitActortype(self, ctx:DIDParser.ActortypeContext):
-        pass
+        actor = {}
+        for method in ctx.methodtype():
+            m = self.cache[method]
+            actor[m[0]] = m[1]
+        self.datatype = actor
+        self.cache[ctx] = self.datatype
 
-
-    # Enter a parse tree produced by DIDParser#Name.
-    def enterName(self, ctx:DIDParser.NameContext):
-        pass
 
     # Exit a parse tree produced by DIDParser#Name.
     def exitName(self, ctx:DIDParser.NameContext):
-        pass
+        typename = ctx.Name().getText()
+        if typename not in self.data:
+            # recursive type
+            self.rec[typename] = Types.Rec()
+            self.datatype = self.rec[typename]
+        else:
+            self.datatype = self.data[typename]
+        
+        if self.argmode:
+            self.cache[ctx] = self.datatype
 
-
-    # Enter a parse tree produced by DIDParser#Primitive.
-    def enterPrimitive(self, ctx:DIDParser.PrimitiveContext):
-        pass
 
     # Exit a parse tree produced by DIDParser#Primitive.
     def exitPrimitive(self, ctx:DIDParser.PrimitiveContext):
-        pass
+        prim = ctx.PrimType().getText()
+        self.datatype = self.data[prim]
 
-
-    # Enter a parse tree produced by DIDParser#Component.
-    def enterComponent(self, ctx:DIDParser.ComponentContext):
-        pass
+        if self.argmode:
+            self.cache[ctx] = self.datatype
 
     # Exit a parse tree produced by DIDParser#Component.
     def exitComponent(self, ctx:DIDParser.ComponentContext):
-        pass
+        if self.argmode:
+            self.cache[ctx] = self.datatype
 
-
-    # Enter a parse tree produced by DIDParser#comptype.
-    def enterComptype(self, ctx:DIDParser.ComptypeContext):
-        pass
-
-    # Exit a parse tree produced by DIDParser#comptype.
-    def exitComptype(self, ctx:DIDParser.ComptypeContext):
-        pass
-
-
-    # Enter a parse tree produced by DIDParser#Option.
-    def enterOption(self, ctx:DIDParser.OptionContext):
-        pass
 
     # Exit a parse tree produced by DIDParser#Option.
     def exitOption(self, ctx:DIDParser.OptionContext):
-        pass
+        self.datatype = Types.Opt(self.datatype)
 
-
-    # Enter a parse tree produced by DIDParser#Vector.
-    def enterVector(self, ctx:DIDParser.VectorContext):
-        pass
 
     # Exit a parse tree produced by DIDParser#Vector.
     def exitVector(self, ctx:DIDParser.VectorContext):
-        pass
+        self.datatype = Types.Vec(self.datatype)
 
-
-    # Enter a parse tree produced by DIDParser#EmptyRecord.
-    def enterEmptyRecord(self, ctx:DIDParser.EmptyRecordContext):
-        pass
 
     # Exit a parse tree produced by DIDParser#EmptyRecord.
     def exitEmptyRecord(self, ctx:DIDParser.EmptyRecordContext):
-        pass
+        self.datatype = Types.Record({})
 
-
-    # Enter a parse tree produced by DIDParser#Record.
-    def enterRecord(self, ctx:DIDParser.RecordContext):
-        pass
 
     # Exit a parse tree produced by DIDParser#Record.
     def exitRecord(self, ctx:DIDParser.RecordContext):
-        pass
-
-
-    # Enter a parse tree produced by DIDParser#EmptyVariant.
-    def enterEmptyVariant(self, ctx:DIDParser.EmptyVariantContext):
-        pass
+        isTuple = False
+        isObject = False
+        k = 0
+        record = {}
+        for field in ctx.recordfield():
+            val = self.cache[field]
+            if val[0] == None:
+                key = "_" + str(k)
+                k += 1
+                isTuple = True
+            else:
+                key = val[0]
+                isObject = True
+            record[key] = val[1]
+        if isTuple and isObject:
+            raise ValueError("Anonymous record field not support")
+        if isTuple:
+            self.datatype = Types.Tuple(tuple(record.values()))
+        else:
+            self.datatype = Types.Record(record)
 
     # Exit a parse tree produced by DIDParser#EmptyVariant.
     def exitEmptyVariant(self, ctx:DIDParser.EmptyVariantContext):
-        pass
+        self.datatype = Types.Variant({})
 
-
-    # Enter a parse tree produced by DIDParser#Variant.
-    def enterVariant(self, ctx:DIDParser.VariantContext):
-        pass
 
     # Exit a parse tree produced by DIDParser#Variant.
     def exitVariant(self, ctx:DIDParser.VariantContext):
-        pass
+        variant = {}
+        for field in ctx.variantfield():
+            val = self.cache[field]
+            variant[val[0]] = val[1]
+        self.datatype = Types.Variant(variant)
 
-
-    # Enter a parse tree produced by DIDParser#RecordKV.
-    def enterRecordKV(self, ctx:DIDParser.RecordKVContext):
-        pass
 
     # Exit a parse tree produced by DIDParser#RecordKV.
     def exitRecordKV(self, ctx:DIDParser.RecordKVContext):
-        pass
+        key = ctx.Name().getText()
+        self.cache[ctx] = (key, self.datatype)
 
-
-    # Enter a parse tree produced by DIDParser#RecordData.
-    def enterRecordData(self, ctx:DIDParser.RecordDataContext):
-        pass
 
     # Exit a parse tree produced by DIDParser#RecordData.
     def exitRecordData(self, ctx:DIDParser.RecordDataContext):
-        pass
+        self.cache[ctx] = (None, self.datatype)
 
-
-    # Enter a parse tree produced by DIDParser#VariantKV.
-    def enterVariantKV(self, ctx:DIDParser.VariantKVContext):
-        pass
 
     # Exit a parse tree produced by DIDParser#VariantKV.
     def exitVariantKV(self, ctx:DIDParser.VariantKVContext):
-        pass
+        key = ctx.Name().getText()
+        self.cache[ctx] = (key, self.datatype)
 
-
-    # Enter a parse tree produced by DIDParser#VariantName.
-    def enterVariantName(self, ctx:DIDParser.VariantNameContext):
-        pass
 
     # Exit a parse tree produced by DIDParser#VariantName.
     def exitVariantName(self, ctx:DIDParser.VariantNameContext):
-        pass
-
-
-    # Enter a parse tree produced by DIDParser#reftype.
-    def enterReftype(self, ctx:DIDParser.ReftypeContext):
-        pass
-
-    # Exit a parse tree produced by DIDParser#reftype.
-    def exitReftype(self, ctx:DIDParser.ReftypeContext):
-        pass
-
-
-    # Enter a parse tree produced by DIDParser#functype.
-    def enterFunctype(self, ctx:DIDParser.FunctypeContext):
-        pass
+        key = ctx.Name().getText()
+        self.cache[ctx] = (key, None)
+    
 
     # Exit a parse tree produced by DIDParser#functype.
     def exitFunctype(self, ctx:DIDParser.FunctypeContext):
-        pass
-
-
-    # Enter a parse tree produced by DIDParser#EmptyTuple.
-    def enterEmptyTuple(self, ctx:DIDParser.EmptyTupleContext):
-        pass
+        argCtx = ctx.getChild(0, ttype=DIDParser.TuptypeContext)
+        args = self.cache[argCtx]
+        retCtx = ctx.getChild(1, ttype=DIDParser.TuptypeContext)
+        rets = self.cache[retCtx]
+        if ctx.funcann() == None:
+            anno = []
+        else:
+            anno = [ctx.funcann().getText()]
+        self.datatype = [args, rets, anno]
 
     # Exit a parse tree produced by DIDParser#EmptyTuple.
     def exitEmptyTuple(self, ctx:DIDParser.EmptyTupleContext):
-        pass
+        self.datatype = []
+        self.cache[ctx] = self.datatype
 
 
     # Enter a parse tree produced by DIDParser#Tuple.
     def enterTuple(self, ctx:DIDParser.TupleContext):
-        pass
+        self.datalist = []
 
     # Exit a parse tree produced by DIDParser#Tuple.
     def exitTuple(self, ctx:DIDParser.TupleContext):
-        pass
+        self.datatype = self.datalist
+        self.cache[ctx] = self.datatype
 
 
-    # Enter a parse tree produced by DIDParser#argtypes.
-    def enterArgtypes(self, ctx:DIDParser.ArgtypesContext):
-        pass
+    def enterArgtypes(self, ctx: DIDParser.ArgtypesContext):
+        self.argmode = True
 
     # Exit a parse tree produced by DIDParser#argtypes.
     def exitArgtypes(self, ctx:DIDParser.ArgtypesContext):
-        pass
+        for arg in ctx.datatype():
+            self.datalist.append(self.cache[arg])
+        self.argmode = False
 
-
-    # Enter a parse tree produced by DIDParser#Query.
-    def enterQuery(self, ctx:DIDParser.QueryContext):
-        pass
-
-    # Exit a parse tree produced by DIDParser#Query.
-    def exitQuery(self, ctx:DIDParser.QueryContext):
-        pass
-
-
-    # Enter a parse tree produced by DIDParser#Oneway.
-    def enterOneway(self, ctx:DIDParser.OnewayContext):
-        pass
-
-    # Exit a parse tree produced by DIDParser#Oneway.
-    def exitOneway(self, ctx:DIDParser.OnewayContext):
-        pass
-
-
-    # Enter a parse tree produced by DIDParser#methodtype.
-    def enterMethodtype(self, ctx:DIDParser.MethodtypeContext):
-        pass
 
     # Exit a parse tree produced by DIDParser#methodtype.
     def exitMethodtype(self, ctx:DIDParser.MethodtypeContext):
-        pass
+        name = ctx.Name().getText()
+        self.datatype = (name, self.datatype)
+        self.cache[ctx] = self.datatype
