@@ -96,12 +96,16 @@ class DIDEmitter(DIDParserListener):
     # Exit a parse tree produced by DIDParser#Name.
     def exitName(self, ctx:DIDParser.NameContext):
         typename = ctx.Name().getText()
-        if typename not in self.data:
-            # recursive type
-            self.rec[typename] = Types.Rec()
+        if typename in self.data:
+            # already in defined list
+            self.datatype = self.data[typename]
+        elif typename in self.rec:
+            # already in rec list
             self.datatype = self.rec[typename]
         else:
-            self.datatype = self.data[typename]
+            # new recursive type
+            self.rec[typename] = Types.Rec()
+            self.datatype = self.rec[typename]
         
         if self.argmode:
             self.cache[ctx] = self.datatype
