@@ -10,12 +10,12 @@ pip3 install ic-py
 
 ### Status
 
-1. candid: candid encode & decode  [WIP]
+1. candid: candid encode & decode  [Done]
 2. principal: principal class [Done]
 3. identity: secp256k1 & ed25519 identity [Done]
 4. client: http client [Done]
-5. agent: ic agent to communicate with canisters on ic [WIP]
-6. canister: canister class, initialized with canister id and did file [WIP]
+5. agent: ic agent to communicate with canisters on ic [Done]
+6. canister: canister class, initialized with canister id and did file [Done]
 7. common canister interfaces: ledger, management, nns, cycles wallet [WIP]
 8. automated testing [WIP]
 
