@@ -14,7 +14,7 @@ setup(
     long_description_content_type = "text/markdown",
     url = 'https://github.com/rocklabs-io/ic-py',
     author = 'Rocklabs',
-    author_email = 'ccyanxyz@gmail.com',
+    author_email = 'hello@rocklabs.io',
     keywords = 'dfinity ic agent',
     install_requires = [
         'requests>=2.22.0', 
