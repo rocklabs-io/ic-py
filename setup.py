@@ -18,7 +18,7 @@ setup(
     keywords = 'dfinity ic agent',
     install_requires = [
         'requests>=2.22.0', 
-        'ecdsa>=0.18.0b1', 
+        'ecdsa>=0.18.0b2', 
         'cbor2>=5.4.2', 
         'leb128>=1.0.4', 
         'waiter>=1.2',

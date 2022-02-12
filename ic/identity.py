@@ -2,7 +2,6 @@ import hashlib
 
 from ecdsa.curves import Ed25519, SECP256k1
 from .principal import Principal
-from .keys_adapted import SigningKeyApapted
 import ecdsa
 
 class Identity:
@@ -35,7 +34,7 @@ class Identity:
 
     @staticmethod
     def from_pem(pem: str):
-        key = SigningKeyApapted.from_pem(pem)
+        key = ecdsa.SigningKey.from_pem(pem)
         privkey = key.to_string().hex()
         type = "unknown"
         if key.curve == Ed25519:

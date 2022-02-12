@@ -429,7 +429,7 @@ governance = Canister(agent=agent, canister_id="rrkah-fqaaa-aaaaa-aaaaq-cai", ca
 res = governance.list_proposals(
     {
         'include_reward_status': [], 
-        'before_proposal': [], 
+        'before_proposal': [],
         'limit': 100, 
         'exclude_topic': [], 
         'include_status': [1]
