@@ -334,7 +334,7 @@ class NatClass(PrimitiveType):
         super().__init__()
 
     def covariant(self, x):
-        return x >= 0
+        return isinstance(x, int) and x >= 0
     
     def encodeValue(self, val):
         return leb128.u.encode(val)
