@@ -159,7 +159,7 @@ class DIDEmitter(DIDParserListener):
         if isTuple and isObject:
             raise ValueError("Anonymous record field not support")
         if isTuple:
-            self.datatype = Types.Tuple(tuple(record.values()))
+            self.datatype = Types.Tuple(*record.values())
         else:
             self.datatype = Types.Record(record)
 
