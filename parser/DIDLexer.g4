@@ -55,7 +55,7 @@ fragment NameChar: NameStartChar | '_' | DIGIT;
 
 fragment NameStartChar: [_a-zA-Z];
 
-Name: NameStartChar NameChar*;
+Name: '"'? NameStartChar NameChar* '"'?;
 
 LeftP: '(';
 
