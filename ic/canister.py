@@ -57,4 +57,5 @@ class CaniterMethod:
                 encode(arguments),
                 self.rets
             )
-        return res
+        
+        return list(map(lambda item: item["value"], res))
