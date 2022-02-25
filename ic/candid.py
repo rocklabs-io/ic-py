@@ -73,18 +73,18 @@ class TypeTable():
         self._idx = {}
 
     def has(self, obj: ConstructType):
-        return True if obj.name in self._idx else False
+        return True if id(obj) in self._idx else False
 
     def add(self, obj: ConstructType, buf):
         idx = len(self._typs)
-        self._idx[obj.name] = idx
+        self._idx[id(obj)] = idx
         self._typs.append(buf)
 
     def merge(self, obj: ConstructType, knot:str):
-        idx = self._idx[obj.name] if self.has(obj) else None
+        idx = self._idx[id(obj)] if self.has(obj) else None
         knotIdx = self._idx[knot] if knot in self._idx else None
         if idx == None:
-            raise ValueError("Missing type index for " + obj.name)
+            raise ValueError("Missing type index for " + id(obj))
         if knotIdx == None:
             raise ValueError("Missing type index for " + knot)
         self._typs[idx] = self._typs[knotIdx]
@@ -98,7 +98,7 @@ class TypeTable():
         buf = b''.join(self._typs)
         return length + buf
     
-    def indexOf(self, typeName:str) :
+    def indexOf(self, typeName:int) :
         if not typeName in self._idx:
             raise ValueError("Missing type index for" + typeName)
         return leb128.i.encode(self._idx[typeName] | 0)
@@ -159,7 +159,7 @@ class ConstructType(Type, metaclass=ABCMeta):
             raise ValueError("type mismatch: type on the wire {}, expect type {}".format(type.name, self.name))
 
     def encodeType(self, typeTable: TypeTable):  
-        return typeTable.indexOf(self.name)
+        return typeTable.indexOf(id(self))
 
 # Represents an IDL Empty, a type which has no inhabitants.
 class EmptyClass(PrimitiveType):
