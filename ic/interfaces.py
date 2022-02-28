@@ -1,4 +1,4 @@
-from ic.canister import Canister
+from .canister import Canister
 
 candid_list = {
     'registry':"""type AddNodeOperatorPayload = record {
