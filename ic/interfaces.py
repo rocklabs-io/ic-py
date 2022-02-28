@@ -780,7 +780,6 @@ service : {
 }
 
 nnsConfig = {
-
      'registry': 'rwlgt-iiaaa-aaaaa-aaaaa-cai',
      'governance': 'rrkah-fqaaa-aaaaa-aaaaq-cai',
      'ledger': 'ryjl3-tyaaa-aaaaa-aaaba-cai',
@@ -788,10 +787,6 @@ nnsConfig = {
      'genesis_token': 'renrk-eyaaa-aaaaa-aaada-cai',
      'nns': 'qoctq-giaaa-aaaaa-aaaea-cai',
      'candid': 'a4gq6-oaaaa-aaaab-qaa4q-cai',
-     #      'identity': 'rdmx6-jaaaa-aaaaa-aaadq-cai',#x
-     #      'lifeline': 'rno2w-sqaaa-aaaaa-aaacq-cai',#x
-     #      'root': 'r7inp-6aaaa-aaaaa-aaabq-cai',#x
-     #     'ic_management': 'aaaaa-aa',
 }
 
 class Interfaces:
