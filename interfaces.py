@@ -798,5 +798,5 @@ class Interfaces:
     def __init__(self, agent):
         for canisterName, canisterId in nnsConfig.items():
             candid = candid_list[canisterName]
-            print(canisterName, canisterId, candid[:100])
+#             print(canisterName, canisterId, candid[:100])
             setattr(self, canisterName, Canister(agent, canisterId, candid))
