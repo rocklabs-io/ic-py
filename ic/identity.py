@@ -37,7 +37,7 @@ class Identity:
         self.delegation = None
         self.delegation_principal = None
         self.session_key = None
-        self.sender_pubkey = None
+        self.delegation_sender_pubkey = None
 
     @staticmethod
     def from_pem(pem: str):
@@ -58,15 +58,16 @@ class Identity:
         if self.anonymous:
             return Principal.anonymous()
         elif self.delegation:
-            print(colored("Returning sender {self.delegation_principal} for delegation", "blue"))
-            return self.delegation_principal
+            principal = self.delegation_principal
+            print(colored(f"Returning sender {principal} for delegation", "blue"))
+            return principal
         return Principal.self_authenticating(self._der_pubkey)
 
-    def add_delegation(self, delegation, delegation_principal, session_key, sender_pubkey):
+    def add_delegation(self, delegation, delegation_principal, session_key, delegation_sender_pubkey):
         self.delegation = delegation
         self.delegation_principal = delegation_principal
         self.session_key = session_key
-        self.sender_pubkey = sender_pubkey
+        self.delegation_sender_pubkey = delegation_sender_pubkey
 
     def sign(self, msg: bytes):
         if self.anonymous:
@@ -74,8 +75,7 @@ class Identity:
         if self.session_key:
             print(colored(f"Using session key {self.session_key} to sign message", "blue"))
             sig = self.session_key.sign(msg)
-            # First element of tuple is used as sender_pubkey
-            return (self.sender_pubkey, sig)
+            return (self.delegation_sender_pubkey, sig)
         if self.key_type == 'ed25519':
             sig = self.sk.sign(msg)
             return (self._der_pubkey, sig)

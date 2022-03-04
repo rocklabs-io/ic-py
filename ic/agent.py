@@ -24,8 +24,8 @@ def sign_request(req, iden):
         envelop.update({
             'sender_delegation': [iden.delegation],
         })
-        print(colored(envelop, "blue"))
 
+    print(colored(envelop, "yellow"))
     return req_id, cbor2.dumps(envelop)
 
 # According to did, get the method returned param type
