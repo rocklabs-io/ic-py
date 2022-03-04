@@ -17,6 +17,15 @@ def sign_request(req, iden):
         'sender_pubkey': sig[0],
         'sender_sig': sig[1]
     }
+
+    if iden.delegation != None:
+        print(colored(f"Signing request with delegation", "blue"))
+        assert(envelop["sender_pubkey"] == iden.sender_pubkey)
+        envelop.update({
+            'sender_delegation': [iden.delegation],
+        })
+        print(colored(envelop, "blue"))
+
     return req_id, cbor2.dumps(envelop)
 
 # According to did, get the method returned param type
@@ -49,6 +58,7 @@ class Agent:
 
     def query_endpoint(self, canister_id, data):
         ret = self.client.query(canister_id, data)
+        print(ret)
         return cbor2.loads(ret)
 
     def call_endpoint(self, canister_id, request_id, data):
@@ -71,6 +81,7 @@ class Agent:
         }
         _, data = sign_request(req, self.identity)
         result = self.query_endpoint(canister_id, data)
+        print(result)
         if result['status'] == 'replied':
             if len(arg) == 1:
                 res = decode(result['reply']['arg'])
@@ -114,6 +125,7 @@ class Agent:
         _, data = sign_request(req, self.identity)
         ret = self.read_state_endpoint(canister_id, data)
         d = cbor2.loads(ret)
+        print(d)
         cert = cbor2.loads(d['certificate'])
         return cert
 

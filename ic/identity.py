@@ -4,6 +4,8 @@ from ecdsa.curves import Ed25519, SECP256k1
 from .principal import Principal
 import ecdsa
 
+from termcolor import colored
+
 class Identity:
     def __init__(self, privkey = "", type = "ed25519", anonymous = False):
         privkey = bytes(bytearray.fromhex(privkey))
@@ -32,6 +34,11 @@ class Identity:
         else:
             raise 'unsupported identity type'
 
+        self.delegation = None
+        self.delegation_principal = None
+        self.session_key = None
+        self.sender_pubkey = None
+
     @staticmethod
     def from_pem(pem: str):
         key = ecdsa.SigningKey.from_pem(pem)
@@ -50,11 +57,25 @@ class Identity:
     def sender(self):
         if self.anonymous:
             return Principal.anonymous()
+        elif self.delegation:
+            print(colored("Returning sender {self.delegation_principal} for delegation", "blue"))
+            return self.delegation_principal
         return Principal.self_authenticating(self._der_pubkey)
+
+    def add_delegation(self, delegation, delegation_principal, session_key, sender_pubkey):
+        self.delegation = delegation
+        self.delegation_principal = delegation_principal
+        self.session_key = session_key
+        self.sender_pubkey = sender_pubkey
 
     def sign(self, msg: bytes):
         if self.anonymous:
             return (None, None)
+        if self.session_key:
+            print(colored(f"Using session key {self.session_key} to sign message", "blue"))
+            sig = self.session_key.sign(msg)
+            # First element of tuple is used as sender_pubkey
+            return (self.sender_pubkey, sig)
         if self.key_type == 'ed25519':
             sig = self.sk.sign(msg)
             return (self._der_pubkey, sig)
