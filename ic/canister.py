@@ -4,10 +4,13 @@ from antlr4.InputStream import InputStream
 from ic.candid import encode
 
 class Canister:
-    def __init__(self, agent, canister_id, candid):
+    def __init__(self, agent, canister_id, candid=None):
         self.agent = agent
         self.canister_id = canister_id
-        self.candid = candid
+        if candid:
+            self.candid = candid
+        else:
+            self.candid = agent.query_raw(canister_id, "__get_candid_interface_tmp_hack", encode([]))[0]['value']
 
         input_stream = InputStream(candid)
         lexer = DIDLexer(input_stream)
