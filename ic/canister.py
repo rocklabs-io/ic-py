@@ -14,23 +14,25 @@ class Canister:
             candid = agent.query_raw(canister_id, "__get_candid_interface_tmp_hack", encode([]))
         if 'has no query method' in candid:
             print(candid)
-        else:
-            self.candid = candid[0]['value']
-            input_stream = InputStream(self.candid)
-            lexer = DIDLexer(input_stream)
-            token_stream = CommonTokenStream(lexer)
-            parser = DIDParser(token_stream)
-            tree = parser.program()
+            print("Please provide candid description")
+            raise BaseException("canister " + str(canister_id) + " has no __get_candid_interface_tmp_hack method.")
+        
+        self.candid = candid[0]['value']
+        input_stream = InputStream(self.candid)
+        lexer = DIDLexer(input_stream)
+        token_stream = CommonTokenStream(lexer)
+        parser = DIDParser(token_stream)
+        tree = parser.program()
 
-            emitter = DIDEmitter()
-            walker =  ParseTreeWalker()
-            walker.walk(emitter, tree)
+        emitter = DIDEmitter()
+        walker =  ParseTreeWalker()
+        walker.walk(emitter, tree)
 
-            self.actor = emitter.getActor()
+        self.actor = emitter.getActor()
 
-            for name, method in self.actor["methods"].items():
-                anno = None if len(method[2]) == 0 else method[2][0]
-                setattr(self, name, CaniterMethod(agent, canister_id, name, method[0], method[1], anno))
+        for name, method in self.actor["methods"].items():
+            anno = None if len(method[2]) == 0 else method[2][0]
+            setattr(self, name, CaniterMethod(agent, canister_id, name, method[0], method[1], anno))
 
 class CaniterMethod:
     def __init__(self, agent, canister_id, name, args, rets, anno = None):
