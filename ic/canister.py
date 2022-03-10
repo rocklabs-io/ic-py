@@ -12,12 +12,12 @@ class Canister:
             self.candid = candid
         else:
             candid = agent.query_raw(canister_id, "__get_candid_interface_tmp_hack", encode([]))
+            self.candid = candid[0]['value']
         if 'has no query method' in candid:
             print(candid)
             print("Please provide candid description")
             raise BaseException("canister " + str(canister_id) + " has no __get_candid_interface_tmp_hack method.")
         
-        self.candid = candid[0]['value']
         input_stream = InputStream(self.candid)
         lexer = DIDLexer(input_stream)
         token_stream = CommonTokenStream(lexer)
