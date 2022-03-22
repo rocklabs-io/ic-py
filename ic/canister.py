@@ -4,12 +4,20 @@ from antlr4.InputStream import InputStream
 from .candid import encode
 
 class Canister:
-    def __init__(self, agent, canister_id, candid):
+    def __init__(self, agent, canister_id, candid=None):
         self.agent = agent
         self.canister_id = canister_id
-        self.candid = candid
-
-        input_stream = InputStream(candid)
+        if candid:
+            self.candid = candid
+        else:
+            candid = agent.query_raw(canister_id, "__get_candid_interface_tmp_hack", encode([]))
+            self.candid = candid[0]['value']
+        if 'has no query method' in candid:
+            print(candid)
+            print("Please provide candid description")
+            raise BaseException("canister " + str(canister_id) + " has no __get_candid_interface_tmp_hack method.")
+        
+        input_stream = InputStream(self.candid)
         lexer = DIDLexer(input_stream)
         token_stream = CommonTokenStream(lexer)
         parser = DIDParser(token_stream)
@@ -24,7 +32,6 @@ class Canister:
         for name, method in self.actor["methods"].items():
             anno = None if len(method[2]) == 0 else method[2][0]
             setattr(self, name, CaniterMethod(agent, canister_id, name, method[0], method[1], anno))
-
 
 class CaniterMethod:
     def __init__(self, agent, canister_id, name, args, rets, anno = None):
