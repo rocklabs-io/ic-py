@@ -1,7 +1,7 @@
-from ic.parser.DIDEmitter import *;
+from .parser.DIDEmitter import *;
 from antlr4 import *
 from antlr4.InputStream import InputStream
-from ic.candid import encode
+from .candid import encode
 
 class Canister:
     def __init__(self, agent, canister_id, candid):
