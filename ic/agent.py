@@ -80,7 +80,7 @@ class Agent:
         elif result['status'] == 'rejected':
             return result['reject_message']
 
-    def update_raw(self, canister_id, method_name, *arg):
+    def update_raw(self, canister_id, method_name, *arg, **kwargs):
         assert len(arg) == 1 or len(arg) == 2
         req = {
             'request_type': "call",
@@ -93,7 +93,7 @@ class Agent:
         req_id, data = sign_request(req, self.identity)
         _ = self.call_endpoint(canister_id, req_id, data)
         # print('update.req_id:', req_id.hex())
-        status, result = self.poll(canister_id, req_id)
+        status, result = self.poll(canister_id, req_id, **kwargs)
         if status != 'replied':
             return  status
         else:
@@ -128,7 +128,7 @@ class Agent:
         else:
             return status.decode(), cert
 
-    def poll(self, canister_id, req_id, delay=1, timeout=10):
+    def poll(self, canister_id, req_id, delay=1, timeout=float('inf')):
         status = None
         for _ in wait(delay, timeout):
             status, cert = self.request_status_raw(canister_id, req_id)
