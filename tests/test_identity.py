@@ -23,3 +23,9 @@ class TestIdentity:
 
     def test_secp256k1_frompem(self):
         pass
+
+    def test_ed25519_from_seed(self):
+        mnemonic = 'fence dragon soft spoon embrace bronze regular hawk more remind detect slam'
+        iden = Identity.from_seed(mnemonic)
+        assert iden.key_type == 'ed25519'
+        assert iden.privkey == '97cc884647e7e0ef58c36b57448269ba6a123521a7f234fa5fdc5816d824ef50'
