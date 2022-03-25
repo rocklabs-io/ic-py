@@ -103,7 +103,6 @@ class Agent:
             raise ValueError('Invalid path requested!')
         elif ret == b'Could not parse body as read request: invalid type: byte array, expected a sequence':
             raise ValueError('Could not parse body as read request: invalid type: byte array, expected a sequence')
-        print(ret)
         d = cbor2.loads(ret)
         cert = cbor2.loads(d['certificate'])
         return cert
