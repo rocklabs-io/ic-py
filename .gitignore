@@ -8,6 +8,7 @@ build/
 *.egg-info
 
 .tox/
+.DS_Store
 
 .antlr
 dist/

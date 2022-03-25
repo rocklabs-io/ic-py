@@ -3,6 +3,7 @@ import hashlib
 from ecdsa.curves import Ed25519, SECP256k1
 from .principal import Principal
 import ecdsa
+from mnemonic import Mnemonic
 
 class Identity:
     def __init__(self, privkey = "", type = "ed25519", anonymous = False):
@@ -31,6 +32,14 @@ class Identity:
             self._der_pubkey = self.vk.to_der()
         else:
             raise 'unsupported identity type'
+
+    @staticmethod
+    def from_seed(mnemonic: str):
+        mnemo = Mnemonic('english')
+        seed = mnemo.to_seed(mnemonic).hex()
+        privkey = seed[:64]
+        type = "ed25519"
+        return Identity(privkey=privkey, type=type)
 
     @staticmethod
     def from_pem(pem: str):

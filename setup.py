@@ -22,7 +22,8 @@ setup(
         'cbor2>=5.4.2', 
         'leb128>=1.0.4', 
         'waiter>=1.2',
-        'antlr4-python3-runtime==4.9.3'
+        'antlr4-python3-runtime==4.9.3',
+        'mnemonic==0.20'
         ],
     py_modules = ['ic'],
     package_dir = { 'ic': "ic" },

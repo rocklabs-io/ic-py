@@ -19,20 +19,6 @@ def sign_request(req, iden):
     }
     return req_id, cbor2.dumps(envelop)
 
-# According to did, get the method returned param type
-def getType(method:str):
-    if method == 'totalSupply':
-        return Types.Nat
-    elif method == 'name':
-        return Types.Text
-    elif method == 'balanceOf':
-        return Types.Nat
-    elif method == 'transfer':
-        return Types.Variant({'ok': Types.Nat, 'err': Types.Variant})
-    else:
-        # pass
-        return Types.Nat
-
 class Agent:
     def __init__(self, identity, client, nonce_factory=None, ingress_expiry=300, root_key=IC_ROOT_KEY):
         self.identity = identity
@@ -113,6 +99,10 @@ class Agent:
         }
         _, data = sign_request(req, self.identity)
         ret = self.read_state_endpoint(canister_id, data)
+        if ret == b'Invalid path requested.':
+            raise ValueError('Invalid path requested!')
+        elif ret == b'Could not parse body as read request: invalid type: byte array, expected a sequence':
+            raise ValueError('Could not parse body as read request: invalid type: byte array, expected a sequence')
         d = cbor2.loads(ret)
         cert = cbor2.loads(d['certificate'])
         return cert
