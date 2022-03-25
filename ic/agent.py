@@ -114,11 +114,15 @@ class Agent:
         status, result = self.poll(eid, req_id, **kwargs)
         if status == 'rejected':
             raise Exception('Rejected: ' + result.decode())
-        elif status == 'replied': 
-            return decode(result, return_type)
+        elif status == 'replied':
+            if result[:4] == b'DIDL':
+                return decode(result, return_type)
+            else:
+                # Some canisters don't use DIDL (e.g. they might encode using json instead)
+                return result
         else:
             raise Exception('Timeout to poll result, current status: ' + str(status))
-            
+
     async def update_raw_async(self, canister_id, method_name, arg, return_type = None, effective_canister_id = None, **kwargs):
         req = {
             'request_type': "call",
