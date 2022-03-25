@@ -79,7 +79,10 @@ def flatten_forks(t):
   if t[0] == NodeId.Empty.value:
       return []
   elif t[0] == NodeId.Fork.value:
-      return flatten_forks(t[1]) + (flatten_forks(t[2]))
+      val1 = flatten_forks(t[1])
+      val2 = flatten_forks(t[2])
+      val1.extend(val2)
+      return val1
   else:
       return [t]
 
