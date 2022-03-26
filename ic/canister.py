@@ -64,5 +64,8 @@ class CaniterMethod:
                 encode(arguments),
                 self.rets
             )
+            
+        if type(res) is not list:
+            return res
         
         return list(map(lambda item: item["value"], res))
