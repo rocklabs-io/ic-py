@@ -197,7 +197,7 @@ class DIDEmitter(DIDParserListener):
     # Exit a parse tree produced by DIDParser#VariantName.
     def exitVariantName(self, ctx:DIDParser.VariantNameContext):
         key = ctx.Name().getText()
-        self.cache[ctx] = (key, None)
+        self.cache[ctx] = (key, Types.Null)
     
 
     # Exit a parse tree produced by DIDParser#functype.
