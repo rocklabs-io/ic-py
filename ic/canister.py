@@ -50,19 +50,22 @@ class CaniterMethod:
         for i, arg in enumerate(args):
             arguments.append({"type": self.args[i], "value": arg})
 
+        effective_cansiter_id = args[0]['canister_id'] if self.canister_id == 'aaaaa-aa' and len(args) > 0 and type(args[0]) == dict and 'canister_id' in args[0] else self.canister_id
         if self.anno == 'query':
             res = self.agent.query_raw(
                 self.canister_id,
                 self.name, 
                 encode(arguments),
-                self.rets
+                self.rets,
+                effective_cansiter_id
                 )
         else:
             res = self.agent.update_raw(
                 self.canister_id,
                 self.name, 
                 encode(arguments),
-                self.rets
+                self.rets,
+                effective_cansiter_id
             )
             
         if type(res) is not list:

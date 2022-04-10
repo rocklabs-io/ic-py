@@ -23,7 +23,8 @@ class DIDEmitter(DIDParserListener):
             'null': Types.Null,
             'reserved': Types.Reserved,
             'empty': Types.Empty,
-            'principal': Types.Principal
+            'principal': Types.Principal,
+            'blob': Types.Vec(Types.Nat8)
         }
         self.rec = {}
         self.datatype = None
