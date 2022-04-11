@@ -23,7 +23,8 @@ class DIDEmitter(DIDParserListener):
             'null': Types.Null,
             'reserved': Types.Reserved,
             'empty': Types.Empty,
-            'principal': Types.Principal
+            'principal': Types.Principal,
+            'blob': Types.Vec(Types.Nat8)
         }
         self.rec = {}
         self.datatype = None
@@ -210,7 +211,7 @@ class DIDEmitter(DIDParserListener):
             anno = []
         else:
             anno = [ctx.funcann().getText()]
-        self.datatype = [args, rets, anno]
+        self.datatype = Types.Func(args, rets, anno)
 
     # Exit a parse tree produced by DIDParser#EmptyTuple.
     def exitEmptyTuple(self, ctx:DIDParser.EmptyTupleContext):

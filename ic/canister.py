@@ -1,7 +1,7 @@
 from .parser.DIDEmitter import *;
 from antlr4 import *
 from antlr4.InputStream import InputStream
-from .candid import encode
+from .candid import encode, FuncClass
 
 class Canister:
     def __init__(self, agent, canister_id, candid=None):
@@ -30,8 +30,9 @@ class Canister:
         self.actor = emitter.getActor()
 
         for name, method in self.actor["methods"].items():
-            anno = None if len(method[2]) == 0 else method[2][0]
-            setattr(self, name, CaniterMethod(agent, canister_id, name, method[0], method[1], anno))
+            assert type(method) == FuncClass
+            anno = None if len(method.annotations) == 0 else method.annotations[0]
+            setattr(self, name, CaniterMethod(agent, canister_id, name, method.argTypes, method.retTypes, anno))
 
 class CaniterMethod:
     def __init__(self, agent, canister_id, name, args, rets, anno = None):
@@ -50,19 +51,22 @@ class CaniterMethod:
         for i, arg in enumerate(args):
             arguments.append({"type": self.args[i], "value": arg})
 
+        effective_cansiter_id = args[0]['canister_id'] if self.canister_id == 'aaaaa-aa' and len(args) > 0 and type(args[0]) == dict and 'canister_id' in args[0] else self.canister_id
         if self.anno == 'query':
             res = self.agent.query_raw(
                 self.canister_id,
                 self.name, 
                 encode(arguments),
-                self.rets
+                self.rets,
+                effective_cansiter_id
                 )
         else:
             res = self.agent.update_raw(
                 self.canister_id,
                 self.name, 
                 encode(arguments),
-                self.rets
+                self.rets,
+                effective_cansiter_id
             )
             
         if type(res) is not list:

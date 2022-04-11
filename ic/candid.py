@@ -1,6 +1,7 @@
 # candid.example.py shows how to use candid's en/decode
 
 import leb128
+from collections.abc import Iterable
 from struct import pack,unpack
 from abc import abstractclassmethod, ABCMeta
 from enum import Enum
@@ -528,7 +529,7 @@ class VecClass(ConstructType):
         self._type = _type
 
     def covariant(self, x):
-        return type(x) == list and not False in list(map(self._type.covariant, x))
+        return isinstance(x, Iterable) and not False in list(map(self._type.covariant, x))
     
     def encodeValue(self, val):
         length = leb128.u.encode(len(val))
