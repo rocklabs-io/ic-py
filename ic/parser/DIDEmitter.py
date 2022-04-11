@@ -211,7 +211,7 @@ class DIDEmitter(DIDParserListener):
             anno = []
         else:
             anno = [ctx.funcann().getText()]
-        self.datatype = [args, rets, anno]
+        self.datatype = Types.Func(args, rets, anno)
 
     # Exit a parse tree produced by DIDParser#EmptyTuple.
     def exitEmptyTuple(self, ctx:DIDParser.EmptyTupleContext):

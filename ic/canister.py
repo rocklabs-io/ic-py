@@ -1,7 +1,7 @@
 from .parser.DIDEmitter import *;
 from antlr4 import *
 from antlr4.InputStream import InputStream
-from .candid import encode
+from .candid import encode, FuncClass
 
 class Canister:
     def __init__(self, agent, canister_id, candid=None):
@@ -30,8 +30,9 @@ class Canister:
         self.actor = emitter.getActor()
 
         for name, method in self.actor["methods"].items():
-            anno = None if len(method[2]) == 0 else method[2][0]
-            setattr(self, name, CaniterMethod(agent, canister_id, name, method[0], method[1], anno))
+            assert type(method) == FuncClass
+            anno = None if len(method.annotations) == 0 else method.annotations[0]
+            setattr(self, name, CaniterMethod(agent, canister_id, name, method.argTypes, method.retTypes, anno))
 
 class CaniterMethod:
     def __init__(self, agent, canister_id, name, args, rets, anno = None):
