@@ -75,10 +75,12 @@ class Agent:
         _ = self.call_endpoint(eid, req_id, data)
         # print('update.req_id:', req_id.hex())
         status, result = self.poll(eid, req_id, **kwargs)
-        if status != 'replied':
-            return status
-        else:
+        if status == 'rejected':
+            raise Exception('Rejected: ' + result.decode())
+        elif status == 'replied': 
             return decode(result, return_type)
+        else:
+            raise Exception('Timeout to poll result, current status: ' + str(status))
             
             
 
@@ -121,5 +123,9 @@ class Agent:
             path = ['request_status'.encode(), req_id, 'reply'.encode()]
             res = lookup(path, cert)
             return status, res
+        elif status == 'rejected':
+            path = ['request_status'.encode(), req_id, 'reject_message'.encode()]
+            msg = lookup(path, cert)
+            return status, msg
         else:
             return status, _
