@@ -1,3 +1,4 @@
+import asyncio
 from ic.canister import Canister
 from ic.client import Client
 from ic.identity import Identity
@@ -436,3 +437,17 @@ res = governance.list_proposals(
     }
 )
 print(res)
+
+async def async_test():
+  res = await governance.list_proposals_async(
+    {
+        'include_reward_status': [], 
+        'before_proposal': [],
+        'limit': 100, 
+        'exclude_topic': [], 
+        'include_status': [1]
+    }
+  )
+  print(res)
+
+asyncio.run(async_test())

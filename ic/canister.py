@@ -33,6 +33,7 @@ class Canister:
             assert type(method) == FuncClass
             anno = None if len(method.annotations) == 0 else method.annotations[0]
             setattr(self, name, CaniterMethod(agent, canister_id, name, method.argTypes, method.retTypes, anno))
+            setattr(self, name + '_async', CaniterMethodAsync(agent, canister_id, name, method.argTypes, method.retTypes, anno))
 
 class CaniterMethod:
     def __init__(self, agent, canister_id, name, args, rets, anno = None):
@@ -62,6 +63,46 @@ class CaniterMethod:
                 )
         else:
             res = self.agent.update_raw(
+                self.canister_id,
+                self.name, 
+                encode(arguments),
+                self.rets,
+                effective_cansiter_id
+            )
+            
+        if type(res) is not list:
+            return res
+        
+        return list(map(lambda item: item["value"], res))
+
+class CaniterMethodAsync:
+    def __init__(self, agent, canister_id, name, args, rets, anno = None):
+        self.agent = agent
+        self.canister_id = canister_id
+        self.name = name
+        self.args = args
+        self.rets = rets
+
+        self.anno = anno
+
+    async def __call__(self, *args, **kwargs):
+        if len(args) != len(self.args):
+            raise ValueError("Arguments length not match")
+        arguments = []
+        for i, arg in enumerate(args):
+            arguments.append({"type": self.args[i], "value": arg})
+
+        effective_cansiter_id = args[0]['canister_id'] if self.canister_id == 'aaaaa-aa' and len(args) > 0 and type(args[0]) == dict and 'canister_id' in args[0] else self.canister_id
+        if self.anno == 'query':
+            res = await self.agent.query_raw_async(
+                self.canister_id,
+                self.name, 
+                encode(arguments),
+                self.rets,
+                effective_cansiter_id
+                )
+        else:
+            res = await self.agent.update_raw_async(
                 self.canister_id,
                 self.name, 
                 encode(arguments),
