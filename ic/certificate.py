@@ -50,8 +50,7 @@ Lookup:
     find_label(l, _)                                                 = Unknown
 '''
 from enum import Enum
-from os import pread
-from attr import has
+from .utils import blsVerify
 import leb128
 import hashlib
 import cbor2
@@ -130,9 +129,6 @@ def extract_der(der: bytes):
         raise f"BLS DER-encoded public key is invalid. Expect the following prefix: {der_prefix}, but get {prefix}"
     return der[len(der_prefix):]
 
-# TODO
-def blsVerify(pk: bytes, sig: bytes, msg: bytes):
-    return True
 
 class Certificate(object):
     def __init__(self, cert, agent) -> None:
