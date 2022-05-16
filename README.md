@@ -8,16 +8,14 @@
 pip3 install ic-py
 ```
 
-### Status
+### Features
 
-1. candid: candid encode & decode  [Done]
-2. principal: principal class [Done]
-3. identity: secp256k1 & ed25519 identity [Done]
-4. client: http client [Done]
-5. agent: ic agent to communicate with canisters on ic [Done]
-6. canister: canister class, initialized with canister id and did file [Done]
-7. common canister interfaces: ledger, management, nns, cycles wallet [DONE]
-8. automated testing [DONE]
+1. candid types encode & decode
+2. support secp256k1 & ed25519 identity, pem file import
+3. canister DID file parsing
+4. canister class, initialized with canister id and DID file
+5. common canister interfaces: ledger, management, nns, cycles wallet
+6. async support
 
 ### Modules & Usage
 
@@ -147,5 +145,39 @@ res = governance.list_proposals(
         'include_status': [1]
     }
 )
+```
+
+### 7. Async request
+
+ic-py also supports async requests:
+
+```python
+import asyncio
+from ic.canister import Canister
+from ic.client import Client
+from ic.identity import Identity
+from ic.agent import Agent
+from ic.candid import Types
+
+iden = Identity()
+client = Client()
+agent = Agent(iden, client)
+# read governance candid from file
+governance_did = open("governance.did").read()
+# create a governance canister instance
+governance = Canister(agent=agent, canister_id="rrkah-fqaaa-aaaaa-aaaaq-cai", candid=governance_did)
+# async call
+async def async_test():
+  res = await governance.list_proposals_async(
+    {
+        'include_reward_status': [], 
+        'before_proposal': [],
+        'limit': 100, 
+        'exclude_topic': [], 
+        'include_status': [1]
+    }
+  )
+  print(res)
+asyncio.run(async_test())
 ```
 
