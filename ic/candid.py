@@ -74,7 +74,7 @@ class TypeTable():
         self._idx = {}
 
     def has(self, obj: ConstructType):
-        return True if obj.name in self._idx else False
+        return obj.name in self._idx
 
     def add(self, obj: ConstructType, buf):
         idx = len(self._typs)
@@ -676,7 +676,8 @@ class RecordClass(ConstructType):
 
     @property
     def name(self) -> str:
-        return "record"
+        fields = ";".join(map(lambda kv: kv[0] + ":" + kv[1].name, self._fields.items()))
+        return "record {{{}}}".format(fields) 
 
     @property
     def id(self) -> int:
@@ -804,8 +805,8 @@ class VariantClass(ConstructType):
 
     @property
     def name(self) -> str:
-        # return 'variant {}'.format(self._fields)
-        return 'variant'
+        fields = ";".join(map(lambda kv: kv[0] + ":" + kv[1].name, self._fields.items()))
+        return 'variant {{{}}}'.format(fields)
 
     @property
     def id(self) -> int:
