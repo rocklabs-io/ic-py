@@ -46,7 +46,6 @@ class TestCandid:
         data = bytes.fromhex('4449444c016c02d3e3aa027c868eb7027101002a04f09f92a9')
         res = decode(data)
         assert len(res) == 1
-        assert type(res[0]["type"]) == int
         assert res[0]['value'] == {'_4895187': 42, '_5097222': '💩'}
 
     # def test_tuple_encode(self):
