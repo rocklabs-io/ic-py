@@ -834,7 +834,7 @@ class RecClass(ConstructType):
         return self._type
     
     def covariant(self, x):
-        return self._type if self._type.covariant(x) else False
+        return False if self._type == None else self._type.covariant(x)
     
     def encodeValue(self, val):
         if self._type == None:
