@@ -676,7 +676,7 @@ class RecordClass(ConstructType):
 
     @property
     def name(self) -> str:
-        fields = ";".join(map(lambda kv: kv[0] + ":" + kv[1].name, self._fields.items()))
+        fields = ";".join(map(lambda kv: str(kv[0]) + ":" + kv[1].name, self._fields.items()))
         return "record {{{}}}".format(fields) 
 
     @property
@@ -805,7 +805,7 @@ class VariantClass(ConstructType):
 
     @property
     def name(self) -> str:
-        fields = ";".join(map(lambda kv: kv[0] + ":" + kv[1].name, self._fields.items()))
+        fields = ";".join(map(lambda kv: str(kv[0]) + ":" + kv[1].name, self._fields.items()))
         return 'variant {{{}}}'.format(fields)
 
     @property
@@ -859,7 +859,7 @@ class RecClass(ConstructType):
 
     @property
     def name(self) -> str:
-        return labelHash('rec_{}'.format(self._id))
+        return 'rec_{}'.format(self._id)
 
 
     def display(self):
