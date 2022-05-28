@@ -1,4 +1,5 @@
 import hashlib
+import json
 
 from ecdsa.curves import Ed25519, SECP256k1
 from .principal import Principal
@@ -88,3 +89,48 @@ class Identity:
 
     def __str__(self):
         return "(" + self.key_type + ', ' + self._privkey + ", " + self._pubkey + ")"
+
+def _map_delegation(delegation: dict):
+        return {
+            "delegation": {
+                "expiration": int(delegation["delegation"]["expiration"], 16),
+                "pubkey": bytes.fromhex(delegation["delegation"]["pubkey"])
+            },
+            "signature": bytes.fromhex(delegation["signature"])
+        }
+
+class DelegateIdentity:
+    def __init__(self, identity: Identity, delegation):
+        self.identity = identity
+        self._delegations = [_map_delegation(d) for d in delegation['delegations']]
+        self._der_pubkey = bytes.fromhex(delegation["publicKey"])
+
+    def sign(self, msg: bytes):
+        return self.identity.sign(msg)
+
+    def sender(self):
+        return Principal.self_authenticating(self._der_pubkey)
+
+    @property
+    def delegations(self):
+        return self._delegations
+
+    @property
+    def der_pubkey(self):
+        return self._der_pubkey
+
+    @staticmethod
+    def from_json(ic_identity: str, ic_delegation: str):
+        parsed_ic_identity = json.loads(ic_identity)
+        parsed_ic_delegation = json.loads(ic_delegation)
+
+        return DelegateIdentity(
+            Identity(parsed_ic_identity[1][:64]),
+            parsed_ic_delegation
+        )
+
+    def __repr__(self):
+        return "DelegationIdentity(" + self.identity + ',\n' + self.delegation + ")"
+
+    def __str__(self):
+        return "(" + self.identity + ',\n' + self.delegation + ")"

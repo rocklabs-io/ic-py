@@ -17,6 +17,11 @@ def sign_request(req, iden):
         'sender_pubkey': sig[0],
         'sender_sig': sig[1]
     }
+    if type(iden) == DelegateIdentity:
+        envelop.update({
+            "sender_pubkey": iden.der_pubkey,
+            "sender_delegation": iden.delegations
+        })
     return req_id, cbor2.dumps(envelop)
 
 class Agent:
@@ -68,6 +73,8 @@ class Agent:
         }
         _, data = sign_request(req, self.identity)
         result = self.query_endpoint(canister_id if effective_canister_id is None else effective_canister_id, data)
+        if type(result) != dict or "status" not in result:
+            raise ValueError("Malformed result: " + str(result))
         if result['status'] == 'replied':
             return decode(result['reply']['arg'], return_type)
         elif result['status'] == 'rejected':
@@ -84,6 +91,8 @@ class Agent:
         }
         _, data = sign_request(req, self.identity)
         result = await self.query_endpoint_async(canister_id if effective_canister_id is None else effective_canister_id, data)
+        if type(result) != dict or "status" not in result:
+            raise ValueError("Malformed result: " + str(result))
         if result['status'] == 'replied':
             return decode(result['reply']['arg'], return_type)
         elif result['status'] == 'rejected':
