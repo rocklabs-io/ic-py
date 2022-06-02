@@ -72,6 +72,13 @@ class Identity:
             sig = self.sk.sign(msg)
             return (self._der_pubkey, sig)
 
+    def verify(self, msg, sig: bytes) -> bool :
+        if type(msg) == str:
+            msg = bytes.fromhex(msg)
+        if self.anonymous:
+            return False
+        return self.vk.verify(sig, msg)
+
     @property
     def privkey(self):
         return self._privkey
