@@ -1,5 +1,7 @@
 ## Python Agent Library for the Internet Computer
 
+![ic-py](./pics/ic-py.png)
+
 `ic-py` provides basic modules to interact with canisters on the DFINITY Internet Computer. Its still under active development.
 
 ### Install
