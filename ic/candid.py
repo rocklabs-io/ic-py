@@ -101,7 +101,7 @@ class TypeTable():
     
     def indexOf(self, typeName:str) :
         if not typeName in self._idx:
-            raise ValueError("Missing type index for" + typeName)
+            raise ValueError("Missing type index for " + typeName)
         return leb128.i.encode(self._idx[typeName] | 0)
 
 
@@ -847,8 +847,9 @@ class RecClass(ConstructType):
             raise ValueError("Recursive type uninitialized")
         else:
             typeTable.add(self, b'') # check b'' or []
-            self._type.buildTypeTable(typeTable)
-            typeTable.merge(self, self._type.name)
+            if not isinstance(self._type, PrimitiveType):    
+                self._type.buildTypeTable(typeTable)
+                typeTable.merge(self, self._type.name)
 
 
     def decodeValue(self, b: Pipe, t: Type):
