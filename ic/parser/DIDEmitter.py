@@ -181,6 +181,7 @@ class DIDEmitter(DIDParserListener):
     # Exit a parse tree produced by DIDParser#RecordKV.
     def exitRecordKV(self, ctx:DIDParser.RecordKVContext):
         key = ctx.Name().getText()
+        key = key.strip('"')
         self.cache[ctx] = (key, self.datatype)
 
 
