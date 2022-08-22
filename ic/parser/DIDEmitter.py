@@ -193,12 +193,14 @@ class DIDEmitter(DIDParserListener):
     # Exit a parse tree produced by DIDParser#VariantKV.
     def exitVariantKV(self, ctx:DIDParser.VariantKVContext):
         key = ctx.Name().getText()
+        key = key.strip('"')
         self.cache[ctx] = (key, self.datatype)
 
 
     # Exit a parse tree produced by DIDParser#VariantName.
     def exitVariantName(self, ctx:DIDParser.VariantNameContext):
         key = ctx.Name().getText()
+        key = key.strip('"')
         self.cache[ctx] = (key, Types.Null)
     
 
