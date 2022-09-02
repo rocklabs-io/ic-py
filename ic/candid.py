@@ -95,7 +95,11 @@ class TypeTable():
         del self._idx[knot]
 
     def encode(self) :
-        length = leb128.u.encode(len(self._typs))
+        l = 0
+        for t in self._typs:
+            if len(t) != 0:
+                l += 1
+        length = leb128.u.encode(l)
         buf = b''.join(self._typs)
         return length + buf
     
@@ -831,6 +835,8 @@ class RecClass(ConstructType):
         self._type = t
     
     def getType(self):
+        if isinstance(self._type, RecClass):
+            return self._type.getType()
         return self._type
     
     def covariant(self, x):
@@ -841,13 +847,19 @@ class RecClass(ConstructType):
             raise ValueError("Recursive type uninitialized")
         else:
             return self._type.encodeValue(val)
+    
+    def encodeType(self, typeTable):
+        if isinstance(self._type, PrimitiveType):
+            return self._type.encodeType(typeTable)
+        else:
+            return super().encodeType(typeTable)
 
     def _buildTypeTableImpl(self, typeTable: TypeTable):
         if self._type == None:
             raise ValueError("Recursive type uninitialized")
         else:
-            typeTable.add(self, b'') # check b'' or []
-            if not isinstance(self._type, PrimitiveType):    
+            if not isinstance(self.getType(), PrimitiveType):
+                typeTable.add(self, b'')
                 self._type.buildTypeTable(typeTable)
                 typeTable.merge(self, self._type.name)
 
