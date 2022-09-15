@@ -2,7 +2,7 @@
 
 ![ic-py](./pics/ic-py.png)
 
-`ic-py` provides basic modules to interact with canisters on the DFINITY Internet Computer. Its still under active development.
+`ic-py` provides basic modules to interact with canisters on the DFINITY Internet Computer.
 
 ### Install
 
