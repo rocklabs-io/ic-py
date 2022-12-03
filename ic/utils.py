@@ -17,16 +17,25 @@ def encode_list(l):
 
 # used for sort record by key
 def labelHash(s:str) -> int:
-    #TODO input regulatization
-    if '_' == s[0]:
-        num = int(s[1:])
-        if num >= 0 and num < 2**32:
+    if re.match("(^_\d+_$)|(^_0x[0-9a-fA-F]+_$)", s):
+        num = s[1:-1]
+        try:
+            if num.startswith("0x"):
+                num = int(num, 16)
+            else:
+                num = int(num)
+        except:
+            # fallback
+            pass
+        if type(num) == int and num >= 0 and num < 2**32:
             return num
+    return idlHash(s)
+
+def idlHash(s:str) -> int:
     h = 0
     for c in s.encode():
         h = (h * 223 + c) % 2 ** 32
     return h
-
 
 def to_request_id(d):
     if not isinstance(d, dict):
