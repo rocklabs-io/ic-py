@@ -621,7 +621,7 @@ class RecordClass(ConstructType):
         res = []
         idx = 0
         for k, v in self._fields.items():
-            if k != "_" + str(idx):
+            if k != '_' + str(idx) + '_':
                 return None
             res.append(v)
             idx += 1
@@ -698,7 +698,7 @@ class TupleClass(RecordClass):
     def __init__(self, *_components):
         x = {}
         for i, v in enumerate(_components):
-            x['_' + str(i)] = v
+            x['_' + str(i) + '_'] = v
         super().__init__(x)
         self._components = _components
     
@@ -1216,7 +1216,7 @@ def buildType(rawTable, table, entry):
     elif ty == TypeIds.Record.value:
         fields = {}
         for hash , t in entry[1]:
-            name = '_' + str(hash)
+            name = '_' + str(hash) + '_'
             if t >= len(rawTable):
                 raise ValueError("type index out of range")
             temp = getType(rawTable, table, t)
@@ -1230,7 +1230,7 @@ def buildType(rawTable, table, entry):
     elif ty == TypeIds.Variant.value:
         fields = {}
         for hash , t in entry[1]:
-            name = '_' + str(hash)
+            name = '_' + str(hash) + '_'
             if t >= len(rawTable):
                 raise ValueError("type index out of range")
             temp = getType(rawTable, table, t)
