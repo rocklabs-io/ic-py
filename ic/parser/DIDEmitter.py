@@ -150,7 +150,7 @@ class DIDEmitter(DIDParserListener):
         for field in ctx.recordfield():
             val = self.cache[field]
             if val[0] == None:
-                key = "_" + str(k)
+                key = "_" + str(k) + "_"
                 k += 1
                 isTuple = True
             else:
