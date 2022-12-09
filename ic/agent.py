@@ -76,7 +76,11 @@ class Agent:
         if type(result) != dict or "status" not in result:
             raise Exception("Malformed result: " + str(result))
         if result['status'] == 'replied':
-            return decode(result['reply']['arg'], return_type)
+            arg = result['reply']['arg']
+            if (arg[:4] == b"DIDL"):
+                return decode(arg, return_type)
+            else:
+                return arg
         elif result['status'] == 'rejected':
             raise Exception("Canister reject the call: " + result['reject_message'])
 
@@ -94,7 +98,11 @@ class Agent:
         if type(result) != dict or "status" not in result:
             raise Exception("Malformed result: " + str(result))
         if result['status'] == 'replied':
-            return decode(result['reply']['arg'], return_type)
+            arg = result['reply']['arg']
+            if (arg[:4] == b"DIDL"):
+                return decode(arg, return_type)
+            else:
+                return arg
         elif result['status'] == 'rejected':
             raise Exception("Canister reject the call: " + result['reject_message'])
 
@@ -140,7 +148,10 @@ class Agent:
         if status == 'rejected':
             raise Exception('Rejected: ' + result.decode())
         elif status == 'replied': 
-            return decode(result, return_type)
+            if (result[:4] == b"DIDL"):
+                return decode(result, return_type)
+            else:
+                return result
         else:
             raise Exception('Timeout to poll result, current status: ' + str(status))        
 
