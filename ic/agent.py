@@ -36,7 +36,7 @@ class Agent:
         return self.identity.sender()
 
     def get_expiry_date(self):
-        return int(time.time() + self.ingress_expiry) * 10**9
+        return int((time.time() + self.ingress_expiry) * 10**9)
 
     def query_endpoint(self, canister_id, data):
         ret = self.client.query(canister_id, data)
