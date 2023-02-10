@@ -7,6 +7,7 @@ from .constants import *
 from .utils import to_request_id
 from .certificate import lookup
 
+DEFAULT_POLL_TIMEOUT_SECS=60.0
 
 def sign_request(req, iden):
     req_id = to_request_id(req)
@@ -214,7 +215,7 @@ class Agent:
         else:
             return status.decode(), cert
 
-    def poll(self, canister_id, req_id, delay=1, timeout=float('inf')):
+    def poll(self, canister_id, req_id, delay=1, timeout=DEFAULT_POLL_TIMEOUT_SECS):
         status = None
         for _ in wait(delay, timeout):
             status, cert = self.request_status_raw(canister_id, req_id)
@@ -232,7 +233,7 @@ class Agent:
         else:
             return status, _
     
-    async def poll_async(self, canister_id, req_id, delay=1, timeout=float('inf')):
+    async def poll_async(self, canister_id, req_id, delay=1, timeout=DEFAULT_POLL_TIMEOUT_SECS):
         status = None
         for _ in wait(delay, timeout):
             status, cert = await self.request_status_raw_async(canister_id, req_id)
