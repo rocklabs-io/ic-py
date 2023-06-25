@@ -17,3 +17,20 @@ class TestPrincipal:
     def test_fromstr(self):
         p = Principal.from_str("zbtml-m23rk-szoaa-5x6p5-co5in-yylx6-463xu-zbjp4-4oizn-cqaij-tae")
         assert p.to_str() == 'zbtml-m23rk-szoaa-5x6p5-co5in-yylx6-463xu-zbjp4-4oizn-cqaij-tae'
+
+    def test_eq(self):
+        p0 = Principal.anonymous()
+        p1 = Principal.management_canister()
+        assert p0 != p1
+
+        p2 = Principal.from_str("aaaaa-aa")
+        assert p1 == p2
+
+    def test_hash(self):
+        p = Principal.management_canister()
+        m = {}
+        m[p] = 1
+        assert m[p] == 1
+        m[p] = 2
+        assert m[p] == 2
+        assert len(m) == 1

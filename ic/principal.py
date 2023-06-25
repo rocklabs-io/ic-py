@@ -92,6 +92,15 @@ class Principal:
     def __str__(self):
         return self.to_str()
 
+    def __eq__(self, other: object) -> bool:
+        if type(other) is type(self):
+            return self.len == other.len and self.bytes == other.bytes
+        else:
+            return False
+        
+    def __hash__(self) -> int:
+        return hash(self.bytes)
+
 class AccountIdentifier:
     def __init__(self, hash: bytes) -> None:
         assert len(hash) == 32
