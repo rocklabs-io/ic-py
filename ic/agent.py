@@ -5,7 +5,7 @@ from .candid import decode, Types
 from .identity import *
 from .constants import *
 from .utils import to_request_id
-from .certificate import lookup
+from .certificate import Certificate
 
 DEFAULT_POLL_TIMEOUT_SECS=60.0
 
@@ -198,11 +198,13 @@ class Agent:
             ['request_status'.encode(), req_id],
         ]
         cert = self.read_state_raw(canister_id, paths)
-        status = lookup(['request_status'.encode(), req_id, 'status'.encode()], cert)
+        c = Certificate(cert, self)
+        c.verify()
+        status = c.lookup(['request_status'.encode(), req_id, 'status'.encode()])
         if (status == None):
-            return status, cert
+            return status, c
         else:
-            return status.decode(), cert
+            return status.decode(), c
 
     async def request_status_raw_async(self, canister_id, req_id):
         paths = [
@@ -218,17 +220,17 @@ class Agent:
     def poll(self, canister_id, req_id, delay=1, timeout=DEFAULT_POLL_TIMEOUT_SECS):
         status = None
         for _ in wait(delay, timeout):
-            status, cert = self.request_status_raw(canister_id, req_id)
+            status, c = self.request_status_raw(canister_id, req_id)
             if status == 'replied' or status == 'done' or status  == 'rejected':
                 break
         
         if status == 'replied':
             path = ['request_status'.encode(), req_id, 'reply'.encode()]
-            res = lookup(path, cert)
+            res = c.lookup(path)
             return status, res
         elif status == 'rejected':
             path = ['request_status'.encode(), req_id, 'reject_message'.encode()]
-            msg = lookup(path, cert)
+            msg = c.lookup(path)
             return status, msg
         else:
             return status, _

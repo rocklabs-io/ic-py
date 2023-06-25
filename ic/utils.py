@@ -1,6 +1,6 @@
-import re
 import leb128
 import hashlib
+from .bls import bls_init, load, bls_verify
 
 def encode_list(l):
     ret = b''
@@ -56,3 +56,18 @@ def to_request_id(d):
         vec.append(h_k + h_v)
     s = b''.join(sorted(vec))
     return hashlib.sha256(s).digest()
+
+verify = None
+
+def blsVerify(
+    pk,
+    sig,
+    msg
+):
+    global verify
+    if verify == None:
+        load()
+        if bls_init() != 0:
+            raise "Can not initialize BLS"
+        verify = lambda pk1, sig1, msg1: bls_verify(sig1, msg1, pk1) == 0
+    return verify(pk, sig, msg)

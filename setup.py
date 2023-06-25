@@ -23,7 +23,9 @@ setup(
         'leb128>=1.0.4', 
         'waiter>=1.2',
         'antlr4-python3-runtime==4.9.3',
-        'mnemonic==0.20'
+        'mnemonic==0.20',
+        'wasmer==1.1.0',
+        'wasmer_compiler_cranelift==1.1.0'
         ],
     py_modules = ['ic'],
     package_dir = { 'ic': "ic" },
