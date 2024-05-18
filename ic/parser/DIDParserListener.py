@@ -224,6 +224,15 @@ class DIDParserListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by DIDParser#CompositeQuery.
+    def enterCompositeQuery(self, ctx:DIDParser.CompositeQueryContext):
+        pass
+
+    # Exit a parse tree produced by DIDParser#CompositeQuery.
+    def exitCompositeQuery(self, ctx:DIDParser.CompositeQueryContext):
+        pass
+
+
     # Enter a parse tree produced by DIDParser#Oneway.
     def enterOneway(self, ctx:DIDParser.OnewayContext):
         pass

@@ -47,6 +47,6 @@ argtypes:
 	datatype (Comma datatype)* Comma?
 	| Name Colon datatype;
 
-funcann: Query # Query | Oneway # Oneway;
+funcann: Query # Query | CompositeQuery #CompositeQuery | Oneway # Oneway;
 
 methodtype: Name Colon functype;

@@ -10,6 +10,8 @@ Type: 'type';
 
 Query: 'query';
 
+CompositeQuery: 'composite_query';
+
 Oneway: 'oneway';
 
 PrimType:

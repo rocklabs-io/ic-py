@@ -3,6 +3,7 @@ __pycache__
 .vscode
 .lh
 test.py
+venv/
 
 build/
 *.egg-info

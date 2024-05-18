@@ -1014,6 +1014,8 @@ class FuncClass(ConstructType):
             return int.to_bytes(1, 1, byteorder='big')
         elif ann == 'oneway':
             return int.to_bytes(2, 1, byteorder='big')
+        elif ann == "composite_query":
+            return int.to_bytes(3, 1, byteorder='big')
         else:
             raise ValueError('Illeagal function annotation')
 

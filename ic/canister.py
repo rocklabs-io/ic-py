@@ -53,7 +53,7 @@ class CaniterMethod:
             arguments.append({"type": self.args[i], "value": arg})
 
         effective_cansiter_id = args[0]['canister_id'] if self.canister_id == 'aaaaa-aa' and len(args) > 0 and type(args[0]) == dict and 'canister_id' in args[0] else self.canister_id
-        if self.anno == 'query':
+        if self.anno == 'query' or  self.anno == 'composite_query':
             res = self.agent.query_raw(
                 self.canister_id,
                 self.name, 
@@ -93,7 +93,7 @@ class CaniterMethodAsync:
             arguments.append({"type": self.args[i], "value": arg})
 
         effective_cansiter_id = args[0]['canister_id'] if self.canister_id == 'aaaaa-aa' and len(args) > 0 and type(args[0]) == dict and 'canister_id' in args[0] else self.canister_id
-        if self.anno == 'query':
+        if self.anno == 'query' or self.anno == 'composite_query':
             res = await self.agent.query_raw_async(
                 self.canister_id,
                 self.name, 
