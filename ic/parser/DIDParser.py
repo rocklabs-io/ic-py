@@ -11,8 +11,8 @@ else:
 
 def serializedATN():
     with StringIO() as buf:
-        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\32")
-        buf.write("\u00b4\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7")
+        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\33")
+        buf.write("\u00b5\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7")
         buf.write("\4\b\t\b\4\t\t\t\4\n\t\n\4\13\t\13\4\f\t\f\4\r\t\r\4\16")
         buf.write("\t\16\4\17\t\17\4\20\t\20\3\2\7\2\"\n\2\f\2\16\2%\13\2")
         buf.write("\3\2\5\2(\n\2\3\3\3\3\3\3\3\3\3\3\3\3\3\4\3\4\5\4\62\n")
@@ -26,59 +26,61 @@ def serializedATN():
         buf.write("\3\13\3\13\3\13\5\13\u008c\n\13\3\f\3\f\3\f\3\f\5\f\u0092")
         buf.write("\n\f\3\r\3\r\3\r\3\r\3\r\3\r\5\r\u009a\n\r\3\16\3\16\3")
         buf.write("\16\7\16\u009f\n\16\f\16\16\16\u00a2\13\16\3\16\5\16\u00a5")
-        buf.write("\n\16\3\16\3\16\3\16\5\16\u00aa\n\16\3\17\3\17\5\17\u00ae")
-        buf.write("\n\17\3\20\3\20\3\20\3\20\3\20\2\2\21\2\4\6\b\n\f\16\20")
-        buf.write("\22\24\26\30\32\34\36\2\2\2\u00bf\2#\3\2\2\2\4)\3\2\2")
-        buf.write("\2\6/\3\2\2\2\b=\3\2\2\2\nK\3\2\2\2\fO\3\2\2\2\16y\3\2")
-        buf.write("\2\2\20\177\3\2\2\2\22\u0085\3\2\2\2\24\u008b\3\2\2\2")
-        buf.write("\26\u008d\3\2\2\2\30\u0099\3\2\2\2\32\u00a9\3\2\2\2\34")
-        buf.write("\u00ad\3\2\2\2\36\u00af\3\2\2\2 \"\5\4\3\2! \3\2\2\2\"")
-        buf.write("%\3\2\2\2#!\3\2\2\2#$\3\2\2\2$\'\3\2\2\2%#\3\2\2\2&(\5")
-        buf.write("\6\4\2\'&\3\2\2\2\'(\3\2\2\2(\3\3\2\2\2)*\7\6\2\2*+\7")
-        buf.write("\21\2\2+,\7\31\2\2,-\5\n\6\2-.\7\30\2\2.\5\3\2\2\2/\61")
-        buf.write("\7\17\2\2\60\62\7\21\2\2\61\60\3\2\2\2\61\62\3\2\2\2\62")
-        buf.write("\63\3\2\2\2\63\67\7\27\2\2\64\65\5\30\r\2\65\66\7\26\2")
-        buf.write("\2\668\3\2\2\2\67\64\3\2\2\2\678\3\2\2\28;\3\2\2\29<\5")
-        buf.write("\b\5\2:<\7\21\2\2;9\3\2\2\2;:\3\2\2\2<\7\3\2\2\2=C\7\24")
-        buf.write("\2\2>?\5\36\20\2?@\7\30\2\2@B\3\2\2\2A>\3\2\2\2BE\3\2")
-        buf.write("\2\2CA\3\2\2\2CD\3\2\2\2DF\3\2\2\2EC\3\2\2\2FG\7\25\2")
-        buf.write("\2G\t\3\2\2\2HL\7\21\2\2IL\7\t\2\2JL\5\f\7\2KH\3\2\2\2")
-        buf.write("KI\3\2\2\2KJ\3\2\2\2L\13\3\2\2\2MP\5\16\b\2NP\5\24\13")
-        buf.write("\2OM\3\2\2\2ON\3\2\2\2P\r\3\2\2\2QR\7\13\2\2Rz\5\n\6\2")
-        buf.write("ST\7\f\2\2Tz\5\n\6\2UV\7\r\2\2VW\7\24\2\2Wz\7\25\2\2X")
-        buf.write("Y\7\r\2\2YZ\7\24\2\2Z_\5\20\t\2[\\\7\30\2\2\\^\5\20\t")
-        buf.write("\2][\3\2\2\2^a\3\2\2\2_]\3\2\2\2_`\3\2\2\2`c\3\2\2\2a")
-        buf.write("_\3\2\2\2bd\7\30\2\2cb\3\2\2\2cd\3\2\2\2de\3\2\2\2ef\7")
-        buf.write("\25\2\2fz\3\2\2\2gh\7\16\2\2hi\7\24\2\2iz\7\25\2\2jk\7")
-        buf.write("\16\2\2kl\7\24\2\2lq\5\22\n\2mn\7\30\2\2np\5\22\n\2om")
-        buf.write("\3\2\2\2ps\3\2\2\2qo\3\2\2\2qr\3\2\2\2ru\3\2\2\2sq\3\2")
-        buf.write("\2\2tv\7\30\2\2ut\3\2\2\2uv\3\2\2\2vw\3\2\2\2wx\7\25\2")
-        buf.write("\2xz\3\2\2\2yQ\3\2\2\2yS\3\2\2\2yU\3\2\2\2yX\3\2\2\2y")
-        buf.write("g\3\2\2\2yj\3\2\2\2z\17\3\2\2\2{|\7\21\2\2|}\7\27\2\2")
-        buf.write("}\u0080\5\n\6\2~\u0080\5\n\6\2\177{\3\2\2\2\177~\3\2\2")
-        buf.write("\2\u0080\21\3\2\2\2\u0081\u0082\7\21\2\2\u0082\u0083\7")
-        buf.write("\27\2\2\u0083\u0086\5\n\6\2\u0084\u0086\7\21\2\2\u0085")
-        buf.write("\u0081\3\2\2\2\u0085\u0084\3\2\2\2\u0086\23\3\2\2\2\u0087")
-        buf.write("\u0088\7\20\2\2\u0088\u008c\5\26\f\2\u0089\u008a\7\17")
-        buf.write("\2\2\u008a\u008c\5\b\5\2\u008b\u0087\3\2\2\2\u008b\u0089")
-        buf.write("\3\2\2\2\u008c\25\3\2\2\2\u008d\u008e\5\30\r\2\u008e\u008f")
-        buf.write("\7\26\2\2\u008f\u0091\5\30\r\2\u0090\u0092\5\34\17\2\u0091")
-        buf.write("\u0090\3\2\2\2\u0091\u0092\3\2\2\2\u0092\27\3\2\2\2\u0093")
-        buf.write("\u0094\7\22\2\2\u0094\u009a\7\23\2\2\u0095\u0096\7\22")
-        buf.write("\2\2\u0096\u0097\5\32\16\2\u0097\u0098\7\23\2\2\u0098")
-        buf.write("\u009a\3\2\2\2\u0099\u0093\3\2\2\2\u0099\u0095\3\2\2\2")
-        buf.write("\u009a\31\3\2\2\2\u009b\u00a0\5\n\6\2\u009c\u009d\7\32")
-        buf.write("\2\2\u009d\u009f\5\n\6\2\u009e\u009c\3\2\2\2\u009f\u00a2")
-        buf.write("\3\2\2\2\u00a0\u009e\3\2\2\2\u00a0\u00a1\3\2\2\2\u00a1")
-        buf.write("\u00a4\3\2\2\2\u00a2\u00a0\3\2\2\2\u00a3\u00a5\7\32\2")
-        buf.write("\2\u00a4\u00a3\3\2\2\2\u00a4\u00a5\3\2\2\2\u00a5\u00aa")
-        buf.write("\3\2\2\2\u00a6\u00a7\7\21\2\2\u00a7\u00a8\7\27\2\2\u00a8")
-        buf.write("\u00aa\5\n\6\2\u00a9\u009b\3\2\2\2\u00a9\u00a6\3\2\2\2")
-        buf.write("\u00aa\33\3\2\2\2\u00ab\u00ae\7\7\2\2\u00ac\u00ae\7\b")
-        buf.write("\2\2\u00ad\u00ab\3\2\2\2\u00ad\u00ac\3\2\2\2\u00ae\35")
-        buf.write("\3\2\2\2\u00af\u00b0\7\21\2\2\u00b0\u00b1\7\27\2\2\u00b1")
-        buf.write("\u00b2\5\26\f\2\u00b2\37\3\2\2\2\30#\'\61\67;CKO_cquy")
-        buf.write("\177\u0085\u008b\u0091\u0099\u00a0\u00a4\u00a9\u00ad")
+        buf.write("\n\16\3\16\3\16\3\16\5\16\u00aa\n\16\3\17\3\17\3\17\5")
+        buf.write("\17\u00af\n\17\3\20\3\20\3\20\3\20\3\20\2\2\21\2\4\6\b")
+        buf.write("\n\f\16\20\22\24\26\30\32\34\36\2\2\2\u00c1\2#\3\2\2\2")
+        buf.write("\4)\3\2\2\2\6/\3\2\2\2\b=\3\2\2\2\nK\3\2\2\2\fO\3\2\2")
+        buf.write("\2\16y\3\2\2\2\20\177\3\2\2\2\22\u0085\3\2\2\2\24\u008b")
+        buf.write("\3\2\2\2\26\u008d\3\2\2\2\30\u0099\3\2\2\2\32\u00a9\3")
+        buf.write("\2\2\2\34\u00ae\3\2\2\2\36\u00b0\3\2\2\2 \"\5\4\3\2! ")
+        buf.write("\3\2\2\2\"%\3\2\2\2#!\3\2\2\2#$\3\2\2\2$\'\3\2\2\2%#\3")
+        buf.write("\2\2\2&(\5\6\4\2\'&\3\2\2\2\'(\3\2\2\2(\3\3\2\2\2)*\7")
+        buf.write("\6\2\2*+\7\22\2\2+,\7\32\2\2,-\5\n\6\2-.\7\31\2\2.\5\3")
+        buf.write("\2\2\2/\61\7\20\2\2\60\62\7\22\2\2\61\60\3\2\2\2\61\62")
+        buf.write("\3\2\2\2\62\63\3\2\2\2\63\67\7\30\2\2\64\65\5\30\r\2\65")
+        buf.write("\66\7\27\2\2\668\3\2\2\2\67\64\3\2\2\2\678\3\2\2\28;\3")
+        buf.write("\2\2\29<\5\b\5\2:<\7\22\2\2;9\3\2\2\2;:\3\2\2\2<\7\3\2")
+        buf.write("\2\2=C\7\25\2\2>?\5\36\20\2?@\7\31\2\2@B\3\2\2\2A>\3\2")
+        buf.write("\2\2BE\3\2\2\2CA\3\2\2\2CD\3\2\2\2DF\3\2\2\2EC\3\2\2\2")
+        buf.write("FG\7\26\2\2G\t\3\2\2\2HL\7\22\2\2IL\7\n\2\2JL\5\f\7\2")
+        buf.write("KH\3\2\2\2KI\3\2\2\2KJ\3\2\2\2L\13\3\2\2\2MP\5\16\b\2")
+        buf.write("NP\5\24\13\2OM\3\2\2\2ON\3\2\2\2P\r\3\2\2\2QR\7\f\2\2")
+        buf.write("Rz\5\n\6\2ST\7\r\2\2Tz\5\n\6\2UV\7\16\2\2VW\7\25\2\2W")
+        buf.write("z\7\26\2\2XY\7\16\2\2YZ\7\25\2\2Z_\5\20\t\2[\\\7\31\2")
+        buf.write("\2\\^\5\20\t\2][\3\2\2\2^a\3\2\2\2_]\3\2\2\2_`\3\2\2\2")
+        buf.write("`c\3\2\2\2a_\3\2\2\2bd\7\31\2\2cb\3\2\2\2cd\3\2\2\2de")
+        buf.write("\3\2\2\2ef\7\26\2\2fz\3\2\2\2gh\7\17\2\2hi\7\25\2\2iz")
+        buf.write("\7\26\2\2jk\7\17\2\2kl\7\25\2\2lq\5\22\n\2mn\7\31\2\2")
+        buf.write("np\5\22\n\2om\3\2\2\2ps\3\2\2\2qo\3\2\2\2qr\3\2\2\2ru")
+        buf.write("\3\2\2\2sq\3\2\2\2tv\7\31\2\2ut\3\2\2\2uv\3\2\2\2vw\3")
+        buf.write("\2\2\2wx\7\26\2\2xz\3\2\2\2yQ\3\2\2\2yS\3\2\2\2yU\3\2")
+        buf.write("\2\2yX\3\2\2\2yg\3\2\2\2yj\3\2\2\2z\17\3\2\2\2{|\7\22")
+        buf.write("\2\2|}\7\30\2\2}\u0080\5\n\6\2~\u0080\5\n\6\2\177{\3\2")
+        buf.write("\2\2\177~\3\2\2\2\u0080\21\3\2\2\2\u0081\u0082\7\22\2")
+        buf.write("\2\u0082\u0083\7\30\2\2\u0083\u0086\5\n\6\2\u0084\u0086")
+        buf.write("\7\22\2\2\u0085\u0081\3\2\2\2\u0085\u0084\3\2\2\2\u0086")
+        buf.write("\23\3\2\2\2\u0087\u0088\7\21\2\2\u0088\u008c\5\26\f\2")
+        buf.write("\u0089\u008a\7\20\2\2\u008a\u008c\5\b\5\2\u008b\u0087")
+        buf.write("\3\2\2\2\u008b\u0089\3\2\2\2\u008c\25\3\2\2\2\u008d\u008e")
+        buf.write("\5\30\r\2\u008e\u008f\7\27\2\2\u008f\u0091\5\30\r\2\u0090")
+        buf.write("\u0092\5\34\17\2\u0091\u0090\3\2\2\2\u0091\u0092\3\2\2")
+        buf.write("\2\u0092\27\3\2\2\2\u0093\u0094\7\23\2\2\u0094\u009a\7")
+        buf.write("\24\2\2\u0095\u0096\7\23\2\2\u0096\u0097\5\32\16\2\u0097")
+        buf.write("\u0098\7\24\2\2\u0098\u009a\3\2\2\2\u0099\u0093\3\2\2")
+        buf.write("\2\u0099\u0095\3\2\2\2\u009a\31\3\2\2\2\u009b\u00a0\5")
+        buf.write("\n\6\2\u009c\u009d\7\33\2\2\u009d\u009f\5\n\6\2\u009e")
+        buf.write("\u009c\3\2\2\2\u009f\u00a2\3\2\2\2\u00a0\u009e\3\2\2\2")
+        buf.write("\u00a0\u00a1\3\2\2\2\u00a1\u00a4\3\2\2\2\u00a2\u00a0\3")
+        buf.write("\2\2\2\u00a3\u00a5\7\33\2\2\u00a4\u00a3\3\2\2\2\u00a4")
+        buf.write("\u00a5\3\2\2\2\u00a5\u00aa\3\2\2\2\u00a6\u00a7\7\22\2")
+        buf.write("\2\u00a7\u00a8\7\30\2\2\u00a8\u00aa\5\n\6\2\u00a9\u009b")
+        buf.write("\3\2\2\2\u00a9\u00a6\3\2\2\2\u00aa\33\3\2\2\2\u00ab\u00af")
+        buf.write("\7\7\2\2\u00ac\u00af\7\b\2\2\u00ad\u00af\7\t\2\2\u00ae")
+        buf.write("\u00ab\3\2\2\2\u00ae\u00ac\3\2\2\2\u00ae\u00ad\3\2\2\2")
+        buf.write("\u00af\35\3\2\2\2\u00b0\u00b1\7\22\2\2\u00b1\u00b2\7\30")
+        buf.write("\2\2\u00b2\u00b3\5\26\f\2\u00b3\37\3\2\2\2\30#\'\61\67")
+        buf.write(";CKO_cquy\177\u0085\u008b\u0091\u0099\u00a0\u00a4\u00a9")
+        buf.write("\u00ae")
         return buf.getvalue()
 
 
@@ -93,16 +95,16 @@ class DIDParser ( Parser ):
     sharedContextCache = PredictionContextCache()
 
     literalNames = [ "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
-                     "'type'", "'query'", "'oneway'", "<INVALID>", "<INVALID>", 
-                     "'opt'", "'vec'", "'record'", "'variant'", "'service'", 
-                     "'func'", "<INVALID>", "'('", "')'", "'{'", "'}'", 
-                     "'->'", "':'", "';'", "'='", "','" ]
+                     "'type'", "'query'", "'composite_query'", "'oneway'", 
+                     "<INVALID>", "<INVALID>", "'opt'", "'vec'", "'record'", 
+                     "'variant'", "'service'", "'func'", "<INVALID>", "'('", 
+                     "')'", "'{'", "'}'", "'->'", "':'", "';'", "'='", "','" ]
 
     symbolicNames = [ "<INVALID>", "BlockComment", "LineComment", "S", "Type", 
-                      "Query", "Oneway", "PrimType", "NumType", "OPT", "VEC", 
-                      "RECORD", "VARIANT", "Service", "FUNC", "Name", "LeftP", 
-                      "RightP", "LeftB", "RightB", "Arrow", "Colon", "Semicolon", 
-                      "Eq", "Comma" ]
+                      "Query", "CompositeQuery", "Oneway", "PrimType", "NumType", 
+                      "OPT", "VEC", "RECORD", "VARIANT", "Service", "FUNC", 
+                      "Name", "LeftP", "RightP", "LeftB", "RightB", "Arrow", 
+                      "Colon", "Semicolon", "Eq", "Comma" ]
 
     RULE_program = 0
     RULE_defination = 1
@@ -131,25 +133,26 @@ class DIDParser ( Parser ):
     S=3
     Type=4
     Query=5
-    Oneway=6
-    PrimType=7
-    NumType=8
-    OPT=9
-    VEC=10
-    RECORD=11
-    VARIANT=12
-    Service=13
-    FUNC=14
-    Name=15
-    LeftP=16
-    RightP=17
-    LeftB=18
-    RightB=19
-    Arrow=20
-    Colon=21
-    Semicolon=22
-    Eq=23
-    Comma=24
+    CompositeQuery=6
+    Oneway=7
+    PrimType=8
+    NumType=9
+    OPT=10
+    VEC=11
+    RECORD=12
+    VARIANT=13
+    Service=14
+    FUNC=15
+    Name=16
+    LeftP=17
+    RightP=18
+    LeftB=19
+    RightB=20
+    Arrow=21
+    Colon=22
+    Semicolon=23
+    Eq=24
+    Comma=25
 
     def __init__(self, input:TokenStream, output:TextIO = sys.stdout):
         super().__init__(input, output)
@@ -1234,7 +1237,7 @@ class DIDParser ( Parser ):
             self.state = 143
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            if _la==DIDParser.Query or _la==DIDParser.Oneway:
+            if (((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << DIDParser.Query) | (1 << DIDParser.CompositeQuery) | (1 << DIDParser.Oneway))) != 0):
                 self.state = 142
                 self.funcann()
 
@@ -1496,13 +1499,31 @@ class DIDParser ( Parser ):
                 listener.exitOneway(self)
 
 
+    class CompositeQueryContext(FuncannContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a DIDParser.FuncannContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def CompositeQuery(self):
+            return self.getToken(DIDParser.CompositeQuery, 0)
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterCompositeQuery" ):
+                listener.enterCompositeQuery(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitCompositeQuery" ):
+                listener.exitCompositeQuery(self)
+
+
 
     def funcann(self):
 
         localctx = DIDParser.FuncannContext(self, self._ctx, self.state)
         self.enterRule(localctx, 26, self.RULE_funcann)
         try:
-            self.state = 171
+            self.state = 172
             self._errHandler.sync(self)
             token = self._input.LA(1)
             if token in [DIDParser.Query]:
@@ -1511,10 +1532,16 @@ class DIDParser ( Parser ):
                 self.state = 169
                 self.match(DIDParser.Query)
                 pass
-            elif token in [DIDParser.Oneway]:
-                localctx = DIDParser.OnewayContext(self, localctx)
+            elif token in [DIDParser.CompositeQuery]:
+                localctx = DIDParser.CompositeQueryContext(self, localctx)
                 self.enterOuterAlt(localctx, 2)
                 self.state = 170
+                self.match(DIDParser.CompositeQuery)
+                pass
+            elif token in [DIDParser.Oneway]:
+                localctx = DIDParser.OnewayContext(self, localctx)
+                self.enterOuterAlt(localctx, 3)
+                self.state = 171
                 self.match(DIDParser.Oneway)
                 pass
             else:
@@ -1566,11 +1593,11 @@ class DIDParser ( Parser ):
         self.enterRule(localctx, 28, self.RULE_methodtype)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 173
-            self.match(DIDParser.Name)
             self.state = 174
-            self.match(DIDParser.Colon)
+            self.match(DIDParser.Name)
             self.state = 175
+            self.match(DIDParser.Colon)
+            self.state = 176
             self.functype()
         except RecognitionException as re:
             localctx.exception = re
