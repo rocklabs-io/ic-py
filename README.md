@@ -12,12 +12,12 @@ pip3 install ic-py
 
 ### Features
 
-1. candid types encode & decode
-2. support secp256k1 & ed25519 identity, pem file import
-3. canister DID file parsing
-4. canister class, initialized with canister id and DID file
-5. common canister interfaces: ledger, management, nns, cycles wallet
-6. async support
+1. Candid types encode & decode.
+2. Support for secp256k1 & ed25519 identity, pem file import.
+3. Canister DID file parsing.
+4. Canister class, initialized with canister id and DID file.
+5. Common canister interfaces: ledger, management, nns, cycles wallet.
+6. async support.
 
 ### Modules & Usage
 
@@ -83,7 +83,7 @@ data = encode(params)
 Decode parameters:
 
 ```python
-# data is bytes, return value is an parameter array
+# data is in bytes, return value is a parameter array
 params = decode(data)
 ```
 
