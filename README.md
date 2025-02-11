@@ -12,12 +12,31 @@ pip3 install ic-py
 
 ### Features
 
-1. candid types encode & decode
-2. support secp256k1 & ed25519 identity, pem file import
-3. canister DID file parsing
-4. canister class, initialized with canister id and DID file
-5. common canister interfaces: ledger, management, nns, cycles wallet
-6. async support
+- **Core Functionality**
+  - Candid types encoding & decoding
+  - Canister interaction and management
+  - Async/await support for non-blocking operations
+
+- **Identity & Security**
+  - Multiple identity types supported:
+    - Secp256k1
+    - Ed25519
+  - PEM file import capabilities
+  - Secure key management
+
+- **Canister Integration**
+  - Canister DID file parsing
+  - Easy canister initialization with ID and DID file
+  - Built-in interfaces for common canisters:
+    - Ledger
+    - Management
+    - Network Nervous System (NNS)
+    - Cycles wallet
+
+- **Developer Experience**
+  - Simple, intuitive API design
+  - Comprehensive type support
+  - Full async/await support for concurrent operations
 
 ### Modules & Usage
 
@@ -56,7 +75,7 @@ i1 = Identity(privkey = "833fe62409237b9d62ec77587520911e9a759cec1d19755b7da901b
 Sign a message:
 
 ```python
-msg = b”ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f“
+msg = b"ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f"
 sig = i.sign(msg) # sig = (der_encoded_pubkey, signature)
 ```
 
