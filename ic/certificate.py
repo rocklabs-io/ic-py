@@ -58,6 +58,12 @@ class NodeId(Enum):
     Leaf = 3
     Pruned = 4
 
+def lookup_reply(request_id, cert):
+    reply_path = [b'request_status',request_id, b'reply']
+    reply_data = lookup(reply_path, cert)
+    return reply_data
+
+
 def lookup(path, cert):
     return lookup_path(path, cert['tree'])
 

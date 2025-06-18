@@ -1,13 +1,42 @@
 import time
+from dataclasses import dataclass
+from typing import Optional
+
 import cbor2
+import httpx
 from waiter import wait
 from .candid import decode, Types
 from .identity import *
 from .constants import *
 from .utils import to_request_id
-from .certificate import lookup
+from .certificate import lookup, lookup_reply
 
 DEFAULT_POLL_TIMEOUT_SECS=60.0
+
+@dataclass
+class RejectResponse:
+    reject_code: int
+    reject_message: str
+    error_code: Optional[str] = None
+
+# Python 版本的 TransportCallResponse enum
+class TransportCallResponse:
+    @dataclass
+    class Replied:
+        certificate: bytes
+
+    @dataclass
+    class NonReplicatedRejection:
+        reject: RejectResponse
+
+    class Accepted:
+        pass
+
+# 自定义错误类型
+class AgentError(Exception):
+    class InvalidCborData(Exception):
+        pass
+
 
 def sign_request(req, iden):
     req_id = to_request_id(req)
@@ -25,8 +54,10 @@ def sign_request(req, iden):
         })
     return req_id, cbor2.dumps(envelop)
 
+DEFAULT_INGRESS_EXPIRY_SEC = 3 * 60  # Default ingress expiry time in seconds
+
 class Agent:
-    def __init__(self, identity, client, nonce_factory=None, ingress_expiry=300, root_key=IC_ROOT_KEY):
+    def __init__(self, identity, client, nonce_factory=None, ingress_expiry=DEFAULT_INGRESS_EXPIRY_SEC, root_key=IC_ROOT_KEY):
         self.identity = identity
         self.client = client
         self.ingress_expiry = ingress_expiry
@@ -48,8 +79,8 @@ class Agent:
         return cbor2.loads(ret)
 
     def call_endpoint(self, canister_id, request_id, data):
-        self.client.call(canister_id, request_id, data)
-        return request_id
+        ret = self.client.call(canister_id, request_id, data)
+        return ret
 
     async def call_endpoint_async(self, canister_id, request_id, data):
         await self.client.call_async(canister_id, request_id, data)
@@ -118,19 +149,27 @@ class Agent:
         }
         req_id, data = sign_request(req, self.identity)
         eid = canister_id if effective_canister_id is None else effective_canister_id
-        _ = self.call_endpoint(eid, req_id, data)
-        # print('update.req_id:', req_id.hex())
-        status, result = self.poll(eid, req_id, **kwargs)
-        if status == 'rejected':
-            raise Exception('Rejected: ' + result.decode())
-        elif status == 'replied':
-            if result[:4] == b'DIDL':
-                return decode(result, return_type)
-            else:
-                # Some canisters don't use DIDL (e.g. they might encode using json instead)
-                return result
-        else:
-            raise Exception('Timeout to poll result, current status: ' + str(status))
+
+        response: httpx.Response = self.call_endpoint(eid, req_id, data)
+        certificate_response = cbor2.loads(response.content)
+
+        # if certificate_response.get('status') == 'replied':
+        cbor_certificate = certificate_response['certificate']
+        certificate = cbor2.loads(cbor_certificate)
+        reply_data = lookup_reply(req_id, certificate)
+        decoded_data  = decode(reply_data, return_type)
+        return decoded_data
+
+        # if certificate_response.get('status') == 'accepted':
+        #     return certificate_response
+        # elif certificate_response.get('status') == 'replied':
+        #     cbor_certificate = certificate_response['certificate']
+        #     certificate = cbor2.loads(cbor_certificate)
+        #     reply_data = lookup_reply(req_id, certificate)
+        #     print("reply data: " + str(reply_data))
+        # else:
+        #     raise Exception("Malformed result: " + str(certificate_response))
+
 
     async def update_raw_async(self, canister_id, method_name, arg, return_type = None, effective_canister_id = None, **kwargs):
         req = {
@@ -250,3 +289,39 @@ class Agent:
             return status, msg
         else:
             return status, _
+
+    # def _parse_transport_response(
+    #     status_code: int,
+    #     content: bytes
+    # ) -> Union[
+    #     TransportCallResponse.Replied,
+    #     TransportCallResponse.NonReplicatedRejection,
+    #     TransportCallResponse.Accepted
+    # ]:
+    #     # 1) HTTP 202 → Accepted
+    #     if status_code == httpx.codes.ACCEPTED:
+    #         return TransportCallResponse.Accepted()
+    #
+    #     # 2) 其余先做 CBOR 解码
+    #     try:
+    #         msg = cbor2.loads(content)
+    #     except cbor2.CBORDecodeError as e:
+    #         raise AgentError.InvalidCborData from e
+    #
+    #     # 3) 内部 tag 分发
+    #     status = msg.get("status")
+    #     if status == "replied":
+    #         cert = msg.get("certificate")
+    #         return TransportCallResponse.Replied(certificate=cert)
+    #
+    #     elif status == "non_replicated_rejection":
+    #         rr = RejectResponse(
+    #             reject_code=msg["reject_code"],
+    #             reject_message=msg["reject_message"],
+    #             error_code=msg.get("error_code"),
+    #         )
+    #         return TransportCallResponse.NonReplicatedRejection(reject=rr)
+    #
+    #     else:
+    #         # 出了未预期的 tag
+    #         raise AgentError.InvalidCborData(f"Unexpected status: {status!r}")
