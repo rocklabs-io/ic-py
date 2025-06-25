@@ -63,6 +63,36 @@ def lookup_reply(request_id, cert):
     reply_data = lookup(reply_path, cert)
     return reply_data
 
+def lookup_request_status(request_id, cert):
+    reply_path = [b'request_status',request_id, b'status']
+    status = lookup(reply_path, cert)
+    return status
+
+def lookup_request_rejection(request_id, cert):
+    reject_code = lookup_reject_code(request_id, cert)
+    reject_message = lookup_reject_message(request_id, cert)
+    error_code = lookup_error_code(request_id, cert)
+    rejection = {
+        'reject_code': reject_code,
+        'reject_message': reject_message,
+        'error_code': error_code
+    }
+    return rejection
+
+def lookup_reject_code(request_id, cert):
+    reply_path = [b'request_status',request_id, b'reject_code']
+    reject_code = lookup(reply_path, cert)
+    return str(reject_code)
+
+def lookup_reject_message(request_id, cert):
+    reply_path = [b'request_status',request_id, b'reject_message']
+    msg = lookup(reply_path, cert)
+    return str(msg)
+
+def lookup_error_code(request_id, cert):
+    reply_path = [b'request_status',request_id, b'error_code']
+    error = lookup(reply_path, cert)
+    return str(error)
 
 def lookup(path, cert):
     return lookup_path(path, cert['tree'])

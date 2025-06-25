@@ -9,34 +9,13 @@ from .candid import decode, Types
 from .identity import *
 from .constants import *
 from .utils import to_request_id
-from .certificate import lookup, lookup_reply
+from .certificate import lookup, lookup_reply, lookup_request_status, lookup_request_rejection
 
 DEFAULT_POLL_TIMEOUT_SECS=60.0
 
-@dataclass
-class RejectResponse:
-    reject_code: int
-    reject_message: str
-    error_code: Optional[str] = None
-
-# Python 版本的 TransportCallResponse enum
-class TransportCallResponse:
-    @dataclass
-    class Replied:
-        certificate: bytes
-
-    @dataclass
-    class NonReplicatedRejection:
-        reject: RejectResponse
-
-    class Accepted:
-        pass
-
-# 自定义错误类型
-class AgentError(Exception):
-    class InvalidCborData(Exception):
-        pass
-
+DEFAULT_INITIAL_DELAY = 0.5    # 500 ms
+DEFAULT_MAX_INTERVAL   = 1.0    # 1 s
+DEFAULT_MULTIPLIER     = 1.4
 
 def sign_request(req, iden):
     req_id = to_request_id(req)
@@ -138,6 +117,7 @@ class Agent:
         elif result['status'] == 'rejected':
             raise Exception("Canister reject the call: " + result['reject_message'])
 
+    # TODO: verify certificate - Milestone2
     def update_raw(self, canister_id, method_name, arg, return_type = None, effective_canister_id = None, **kwargs):
         req = {
             'request_type': "call",
@@ -150,26 +130,32 @@ class Agent:
         req_id, data = sign_request(req, self.identity)
         eid = canister_id if effective_canister_id is None else effective_canister_id
 
-        response: httpx.Response = self.call_endpoint(eid, req_id, data)
-        certificate_response = cbor2.loads(response.content)
+        cbor_response: httpx.Response = self.call_endpoint(eid, req_id, data)
+        response = cbor2.loads(cbor_response.content)
 
-        # if certificate_response.get('status') == 'replied':
-        cbor_certificate = certificate_response['certificate']
-        certificate = cbor2.loads(cbor_certificate)
-        reply_data = lookup_reply(req_id, certificate)
-        decoded_data  = decode(reply_data, return_type)
-        return decoded_data
-
-        # if certificate_response.get('status') == 'accepted':
-        #     return certificate_response
-        # elif certificate_response.get('status') == 'replied':
-        #     cbor_certificate = certificate_response['certificate']
-        #     certificate = cbor2.loads(cbor_certificate)
-        #     reply_data = lookup_reply(req_id, certificate)
-        #     print("reply data: " + str(reply_data))
-        # else:
-        #     raise Exception("Malformed result: " + str(certificate_response))
-
+        status = response.get('status')
+        if status == "replied":
+            cbor_certificate = response['certificate']
+            certificate = cbor2.loads(cbor_certificate)
+            status = lookup_request_status(req_id, certificate)
+            if status == "replied":
+                reply_data = lookup_reply(req_id, certificate)
+                decoded_data = decode(reply_data, return_type)
+                return decoded_data
+            elif status == "rejected":
+                rejection = lookup_request_rejection(req_id, certificate)
+                raise RuntimeError(f"Call rejected (code={rejection['reject_code']}): {rejection['reject_message']} [error_code={rejection.get('error_code')}]")
+            else:
+                self.poll_and_wait(eid, req_id, return_type=return_type)
+        elif status == "accepted":
+            self.poll_and_wait(eid, req_id, return_type=return_type)
+        elif status == "non_replicated_rejection":
+            code = response["reject_code"]
+            message = response["reject_message"]
+            error = response.get("error_code", "unknown")
+            raise RuntimeError(f"Call rejected (code={code}): {message} [error_code={error}]")
+        else:
+            raise RuntimeError(f"Unknown status: {status}")
 
     async def update_raw_async(self, canister_id, method_name, arg, return_type = None, effective_canister_id = None, **kwargs):
         req = {
@@ -237,8 +223,8 @@ class Agent:
             ['request_status'.encode(), req_id],
         ]
         cert = self.read_state_raw(canister_id, paths)
-        status = lookup(['request_status'.encode(), req_id, 'status'.encode()], cert)
-        if (status == None):
+        status = lookup_request_status(req_id, cert)
+        if status is None:
             return status, cert
         else:
             return status.decode(), cert
@@ -254,24 +240,76 @@ class Agent:
         else:
             return status.decode(), cert
 
-    def poll(self, canister_id, req_id, delay=1, timeout=DEFAULT_POLL_TIMEOUT_SECS):
-        status = None
-        for _ in wait(delay, timeout):
-            status, cert = self.request_status_raw(canister_id, req_id)
-            if status == 'replied' or status == 'done' or status  == 'rejected':
-                break
-        
-        if status == 'replied':
-            path = ['request_status'.encode(), req_id, 'reply'.encode()]
-            res = lookup(path, cert)
-            return status, res
-        elif status == 'rejected':
-            path = ['request_status'.encode(), req_id, 'reject_message'.encode()]
-            msg = lookup(path, cert)
-            return status, msg
+    def poll_and_wait(self, canister_id, req_id, return_type=None):
+        status, result = self.poll(canister_id, req_id)
+        if status == "replied":
+            decoded_data = decode(result, return_type)
+            return decoded_data
+        elif status == "rejected":
+            code = result["reject_code"]
+            message = result["reject_message"]
+            error = result.get("error_code", "unknown")
+            raise RuntimeError(f"Call rejected (code={code}): {message} [error_code={error}]")
         else:
-            return status, _
-    
+            raise RuntimeError(f"Unknown status: {status}")
+
+    def poll(
+            self,
+            canister_id,
+            req_id,
+            *,
+            initial_delay: float = DEFAULT_INITIAL_DELAY,
+            max_interval: float = DEFAULT_MAX_INTERVAL,
+            multiplier: float = DEFAULT_MULTIPLIER,
+            timeout: float = DEFAULT_POLL_TIMEOUT_SECS
+    ):
+        """
+        Poll canister call status with exponential backoff.
+
+        Args:
+            canister_id: target canister identifier
+            req_id:       request ID bytes
+            initial_delay: initial backoff interval in seconds (default 0.5s)
+            max_interval:   maximum backoff interval in seconds (default 1s)
+            multiplier:     backoff multiplier (default 1.4)
+            timeout:        maximum total polling time in seconds
+
+        Returns:
+            Tuple(status_str, result_bytes_or_data)
+        """
+        start = time.monotonic()
+        delay = initial_delay
+        status = None
+        cert = None
+
+        while True:
+            status, cert = self.request_status_raw(canister_id, req_id)
+            if status in ("replied", "done", "rejected"):
+                break
+
+            elapsed = time.monotonic() - start
+            if elapsed >= timeout:
+                # timed out
+                break
+
+            # sleep before next retry
+            time.sleep(delay)
+            # increase backoff for next iteration
+            delay = min(delay * multiplier, max_interval)
+
+        # handle final state
+        if status == "replied":
+            reply = lookup_reply(req_id, cert)
+            return status, reply
+        elif status == "rejected":
+            rejection = lookup_request_rejection(req_id, cert)
+            return status, rejection
+        else:
+            # either "done" or timed out
+            return status, cert
+
+
+
     async def poll_async(self, canister_id, req_id, delay=1, timeout=DEFAULT_POLL_TIMEOUT_SECS):
         status = None
         for _ in wait(delay, timeout):
