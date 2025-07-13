@@ -35,13 +35,30 @@ ret = ag.update_raw(
         "set",
         encode([])
         )
-print('result: ', ret)
+print('update result: ', ret)
 
 t1 = time.perf_counter()
 # 4. 计算并打印延迟
 latency_ms = (t1 - t0) * 1000
 print(f"update_raw latency: {latency_ms:.2f} ms")
 print("result:", ret)
+
+
+t0 = time.perf_counter()
+
+ret = ag.query_raw(
+        "v3y75-6iaaa-aaaak-qikaa-cai",
+        "get",
+        encode([])
+        )
+print('query result: ', ret)
+
+t1 = time.perf_counter()
+# 4. 计算并打印延迟
+latency_ms = (t1 - t0) * 1000
+print(f"query_raw latency: {latency_ms:.2f} ms")
+print("result:", ret)
+
 
 #
 # t = time.time()

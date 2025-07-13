@@ -21,17 +21,17 @@ def sign_request(req, iden):
     req_id = to_request_id(req)
     msg = IC_REQUEST_DOMAIN_SEPARATOR + req_id
     sig = iden.sign(msg)
-    envelop = {
+    envelope = {
         'content': req,
         'sender_pubkey': sig[0],
         'sender_sig': sig[1]
     }
-    if type(iden) == DelegateIdentity:
-        envelop.update({
+    if isinstance(iden, DelegateIdentity):
+        envelope.update({
             "sender_pubkey": iden.der_pubkey,
             "sender_delegation": iden.delegations
         })
-    return req_id, cbor2.dumps(envelop)
+    return req_id, cbor2.dumps(envelope)
 
 DEFAULT_INGRESS_EXPIRY_SEC = 3 * 60  # Default ingress expiry time in seconds
 
@@ -47,7 +47,7 @@ class Agent:
         return self.identity.sender()
 
     def get_expiry_date(self):
-        return int((time.time() + self.ingress_expiry) * 10**9)
+        return time.time_ns() + int(self.ingress_expiry * 1e9)
 
     def query_endpoint(self, canister_id, data):
         ret = self.client.query(canister_id, data)
@@ -94,6 +94,8 @@ class Agent:
                 return arg
         elif result['status'] == 'rejected':
             raise Exception("Canister reject the call: " + result['reject_message'])
+        else:
+            raise Exception("Unknown status: " + str(result['status']))
 
     async def query_raw_async(self, canister_id, method_name, arg, return_type = None, effective_canister_id = None):
         req = {
@@ -146,9 +148,9 @@ class Agent:
                 rejection = lookup_request_rejection(req_id, certificate)
                 raise RuntimeError(f"Call rejected (code={rejection['reject_code']}): {rejection['reject_message']} [error_code={rejection.get('error_code')}]")
             else:
-                self.poll_and_wait(eid, req_id, return_type=return_type)
+                return self.poll_and_wait(eid, req_id, return_type=return_type)
         elif status == "accepted":
-            self.poll_and_wait(eid, req_id, return_type=return_type)
+            return self.poll_and_wait(eid, req_id, return_type=return_type)
         elif status == "non_replicated_rejection":
             code = response["reject_code"]
             message = response["reject_message"]

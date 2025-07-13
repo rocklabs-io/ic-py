@@ -19,13 +19,13 @@ class TestAgent:
         ret = self.agent.query_raw("gvbup-jyaaa-aaaah-qcdwa-cai", "name", encode([]))
         assert ret[0]['value'] == 'XTC Test'
 
-    # def test_update(self):
-    #     ret = self.agent.update_raw(
-    #         "gvbup-jyaaa-aaaah-qcdwa-cai",
-    #         "transfer",
-    #         encode([
-    #             {'type': Types.Principal, 'value': 'aaaaa-aa'},
-    #             {'type': Types.Nat, 'value': 10000000000}
-    #             ])
-    #         )
-    #     assert ret != None
+    def test_update(self):
+        ret = self.agent.update_raw(
+            "gvbup-jyaaa-aaaah-qcdwa-cai",
+            "transfer",
+            encode([
+                {'type': Types.Principal, 'value': 'aaaaa-aa'},
+                {'type': Types.Nat, 'value': 10000000000}
+                ])
+            )
+        assert ret != None
