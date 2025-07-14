@@ -1,7 +1,4 @@
 import time
-from dataclasses import dataclass
-from typing import Optional
-
 import cbor2
 import httpx
 from waiter import wait
@@ -88,7 +85,7 @@ class Agent:
             raise Exception("Malformed result: " + str(result))
         if result['status'] == 'replied':
             arg = result['reply']['arg']
-            if (arg[:4] == b"DIDL"):
+            if arg[:4] == b"DIDL":
                 return decode(arg, return_type)
             else:
                 return arg
@@ -112,15 +109,17 @@ class Agent:
             raise Exception("Malformed result: " + str(result))
         if result['status'] == 'replied':
             arg = result['reply']['arg']
-            if (arg[:4] == b"DIDL"):
+            if arg[:4] == b"DIDL":
                 return decode(arg, return_type)
             else:
                 return arg
         elif result['status'] == 'rejected':
             raise Exception("Canister reject the call: " + result['reject_message'])
+        else:
+            raise Exception("Unknown status: " + str(result.get('status')))
 
     # TODO: verify certificate - Milestone2
-    def update_raw(self, canister_id, method_name, arg, return_type = None, effective_canister_id = None, **kwargs):
+    def update_raw(self, canister_id, method_name, arg, return_type = None, effective_canister_id = None):
         req = {
             'request_type': "call",
             'sender': self.identity.sender().bytes,
@@ -134,6 +133,8 @@ class Agent:
 
         cbor_response: httpx.Response = self.call_endpoint(eid, req_id, data)
         response = cbor2.loads(cbor_response.content)
+        if not isinstance(response, dict) or 'status' not in response:
+            raise RuntimeError("Malformed update response: " + str(response))
 
         status = response.get('status')
         if status == "replied":
@@ -176,7 +177,7 @@ class Agent:
         if status == 'rejected':
             raise Exception('Rejected: ' + result.decode())
         elif status == 'replied': 
-            if (result[:4] == b"DIDL"):
+            if result[:4] == b"DIDL":
                 return decode(result, return_type)
             else:
                 return result
@@ -237,7 +238,7 @@ class Agent:
         ]
         cert = await self.read_state_raw_async(canister_id, paths)
         status = lookup(['request_status'.encode(), req_id, 'status'.encode()], cert)
-        if (status == None):
+        if status is None:
             return status, cert
         else:
             return status.decode(), cert
@@ -281,34 +282,42 @@ class Agent:
         """
         start = time.monotonic()
         delay = initial_delay
-        status = None
-        cert = None
+        request_accepted = False
 
         while True:
             status, cert = self.request_status_raw(canister_id, req_id)
             if status in ("replied", "done", "rejected"):
                 break
 
-            elapsed = time.monotonic() - start
-            if elapsed >= timeout:
-                # timed out
-                break
+            # once we see Received or Processing, the request is accepted:
+            # reset backoff so we don’t time out while it’s still in flight
+            if status in ("received", "processing") and not request_accepted:
+                delay = initial_delay
+                request_accepted = True
 
-            # sleep before next retry
+            if time.monotonic() - start >= timeout:
+                raise TimeoutError(f"Polling request {req_id.hex()} timed out after {timeout}s")
+
+            # wait before next attempt
             time.sleep(delay)
-            # increase backoff for next iteration
             delay = min(delay * multiplier, max_interval)
 
-        # handle final state
+        # handle the terminal state
         if status == "replied":
             reply = lookup_reply(req_id, cert)
             return status, reply
+
         elif status == "rejected":
             rejection = lookup_request_rejection(req_id, cert)
             return status, rejection
+
+        elif status == "done":
+            # request completed with no reply
+            raise Exception(f"Request {req_id.hex()} finished (Done) with no reply")
+
         else:
-            # either "done" or timed out
-            return status, cert
+            # should never happen
+            raise Exception(f"Unexpected final status in poll(): {status!r}")
 
 
 
@@ -328,7 +337,7 @@ class Agent:
             msg = lookup(path, cert)
             return status, msg
         else:
-            return status, _
+            return status, cert
 
     # def _parse_transport_response(
     #     status_code: int,

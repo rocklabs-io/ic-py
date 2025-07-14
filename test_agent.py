@@ -28,36 +28,31 @@ ag = Agent(iden, client)
 # print('balanceOf:', ret)
 #
 # transfer 100 tokens to blackhole
-t0 = time.perf_counter()
 
+# update canister state
+t0 = time.perf_counter()
 ret = ag.update_raw(
         "v3y75-6iaaa-aaaak-qikaa-cai",
         "set",
         encode([])
         )
-print('update result: ', ret)
-
 t1 = time.perf_counter()
-# 4. 计算并打印延迟
 latency_ms = (t1 - t0) * 1000
 print(f"update_raw latency: {latency_ms:.2f} ms")
-print("result:", ret)
+print("update result:", ret)
 
 
+# query canister state
 t0 = time.perf_counter()
-
 ret = ag.query_raw(
         "v3y75-6iaaa-aaaak-qikaa-cai",
         "get",
         encode([])
         )
-print('query result: ', ret)
-
 t1 = time.perf_counter()
-# 4. 计算并打印延迟
 latency_ms = (t1 - t0) * 1000
 print(f"query_raw latency: {latency_ms:.2f} ms")
-print("result:", ret)
+print('query result: ', ret)
 
 
 #
