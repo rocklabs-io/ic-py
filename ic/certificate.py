@@ -49,7 +49,11 @@ Lookup:
     find_label(l, [])                                                = Absent
     find_label(l, _)                                                 = Unknown
 '''
+import hashlib
 from enum import Enum
+
+import leb128
+
 
 class NodeId(Enum):
     Empty = 0
@@ -130,6 +134,28 @@ def find_label(l, trees):
             p = t[1]
             if l == p :
                 return t[2]
+
+
+def domain_seq(s: str):
+    return bytes(leb128.u.encode(len(s)) + s.encode())
+
+
+def reconstruct(tree):
+    if tree[0] == NodeId.Empty.value:
+        return hashlib.sha256(domain_seq('ic-hashtree-empty')).digest()
+    elif tree[0] == NodeId.Pruned.value:
+        return tree[1]
+    elif tree[0] == NodeId.Leaf.value:
+        return hashlib.sha256(domain_seq('ic-hashtree-leaf') + tree[1]).digest()
+    elif tree[0] == NodeId.Labeled.value:
+        res = reconstruct(tree[2])
+        return hashlib.sha256(domain_seq('ic-hashtree-labeled') + tree[1] + res).digest()
+    elif tree[0] == NodeId.Fork.value:
+        res1 = reconstruct(tree[1])
+        res2 = reconstruct(tree[2])
+        return hashlib.sha256(domain_seq('ic-hashtree-fork') + res1 + res2).digest()
+    else:
+        raise "unreachable"
 
 if __name__=='__main__':
     tree = [1, [4, b'W\xb4\x1b\x00\xc9x\xc0\xcb\\\xf4\xb6\xa1\xbbE\\\x9fr\xe2\x1a8\xd2bE\x14\x11\xab:\xb5\x1b`\x98\x9d'], [1, [4, b'\xac>_\x80\xeb.$\x9c\x00\xbc\x12\xce&!^\xa8,i\x08\xaeH\x8e\x9ce9\x87\xbahGPo\xe6'], [2, b'time', [3, b'\xd2\xac\xd3\x8a\xfc\xa0\xd0\xe0\x16']]]]
