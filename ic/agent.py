@@ -141,8 +141,7 @@ class Agent:
             cbor_certificate = response['certificate']
             certificate = cbor2.loads(cbor_certificate)
 
-            # 在这儿verify cert
-
+            # TODO: 在这儿verify cert
 
             status = lookup_request_status(req_id, certificate)
             if status == "replied":
