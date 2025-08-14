@@ -3,10 +3,10 @@ import cbor2
 import httpx
 from waiter import wait
 from .candid import decode, Types
+from .certificate import Certificate
 from .identity import *
 from .constants import *
 from .utils import to_request_id
-from .certificate import lookup, lookup_reply, lookup_request_status, lookup_request_rejection
 
 DEFAULT_POLL_TIMEOUT_SECS=60.0
 
@@ -139,17 +139,17 @@ class Agent:
         status = response.get('status')
         if status == "replied":
             cbor_certificate = response['certificate']
-            certificate = cbor2.loads(cbor_certificate)
-
+            decoded_certificate = cbor2.loads(cbor_certificate)
             # TODO: 在这儿verify cert
+            certificate = Certificate(decoded_certificate)
 
-            status = lookup_request_status(req_id, certificate)
+            status = certificate.lookup_request_status(req_id)
             if status == "replied":
-                reply_data = lookup_reply(req_id, certificate)
+                reply_data = certificate.lookup_reply(req_id)
                 decoded_data = decode(reply_data, return_type)
                 return decoded_data
             elif status == "rejected":
-                rejection = lookup_request_rejection(req_id, certificate)
+                rejection = certificate.lookup_request_rejection(req_id)
                 raise RuntimeError(f"Call rejected (code={rejection['reject_code']}): {rejection['reject_message']} [error_code={rejection.get('error_code')}]")
             else:
                 return self.poll_and_wait(eid, req_id, return_type=return_type)
@@ -229,7 +229,8 @@ class Agent:
             ['request_status'.encode(), req_id],
         ]
         cert = self.read_state_raw(canister_id, paths)
-        status = lookup_request_status(req_id, cert)
+        certificate = Certificate(cert)
+        status = certificate.lookup_request_status(req_id)
         if status is None:
             return status, cert
         else:
@@ -240,7 +241,7 @@ class Agent:
             ['request_status'.encode(), req_id],
         ]
         cert = await self.read_state_raw_async(canister_id, paths)
-        status = lookup(['request_status'.encode(), req_id, 'status'.encode()], cert)
+        status = cert.lookup(['request_status'.encode(), req_id, 'status'.encode()], cert)
         if status is None:
             return status, cert
         else:
@@ -288,7 +289,8 @@ class Agent:
         request_accepted = False
 
         while True:
-            status, cert = self.request_status_raw(canister_id, req_id)
+            status, raw_cert = self.request_status_raw(canister_id, req_id)
+            cert = Certificate(raw_cert)
             if status in ("replied", "done", "rejected"):
                 break
 
@@ -307,11 +309,11 @@ class Agent:
 
         # handle the terminal state
         if status == "replied":
-            reply = lookup_reply(req_id, cert)
+            reply = cert.lookup_reply(req_id)
             return status, reply
 
         elif status == "rejected":
-            rejection = lookup_request_rejection(req_id, cert)
+            rejection = cert.lookup_request_rejection(req_id)
             return status, rejection
 
         elif status == "done":
@@ -325,6 +327,7 @@ class Agent:
 
 
     async def poll_async(self, canister_id, req_id, delay=1, timeout=DEFAULT_POLL_TIMEOUT_SECS):
+        global cert
         status = None
         for _ in wait(delay, timeout):
             status, cert = await self.request_status_raw_async(canister_id, req_id)
@@ -333,11 +336,11 @@ class Agent:
         
         if status == 'replied':
             path = ['request_status'.encode(), req_id, 'reply'.encode()]
-            res = lookup(path, cert)
+            res = cert.lookup(path)
             return status, res
         elif status == 'rejected':
             path = ['request_status'.encode(), req_id, 'reject_message'.encode()]
-            msg = lookup(path, cert)
+            msg = cert.lookup(path)
             return status, msg
         else:
             return status, cert

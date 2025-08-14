@@ -1,0 +1,87 @@
+# test_certificate.py
+import sys
+import types
+import pytest
+import cbor2
+
+from ic.certificate import Certificate, extract_der
+
+# ------------- 工具：判断 blst/pyblst 是否可用 -------------
+def blst_available() -> bool:
+    try:
+        import blst  # noqa: F401
+        return True
+    except ModuleNotFoundError:
+        try:
+            import pyblst as blst  # noqa: F401
+            return True
+        except ModuleNotFoundError:
+            return False
+
+
+CERT_SAMPLE = {'tree': [1, [1, [4, b'\xb2\x03\x93m\x98\xba\xc5\xc2/LY\x18x \x11\xaf\xeb\x8c\xd8{\xc3^\xed\x97\xd6\xc0\xdeD\x1b\xaf\x15N'], [1, [4, b'[\x9e\xe0j\x05\xa9X\xbb8\x06X\x143\xe7\xf2\x81\x87\xe7\xf3\x17q\x1e\x8cx\xc2\x8b\xc9{B\to\xeb'], [2, b'request_status', [1, [4, b'\x86\x9b\x9c;yv\xb7ZH=\xea5\xf93\x96\xb2\x94\x89x\xe6\x1f\n\x1a\x8e\xf4\xdb\x1d\xcb\xb9b\xd9'], [1, [4, b'.J\xc20\xa55W|\xd7\x8e\xf4\x0f|@\xf5MKb\x19\xe7\r\x1d\n\xcfA\xb7\xb8\xaay\xfd\x980'], [1, [1, [1, [1, [4, b'Uh\x08\xe9\xe6\x92\x06.(cz\x00d\xcb%\xb3\x00\xb0\x94\xf4B\xd0\x06HP\xd8\xb5r\x11NRt'], [1, [1, [1, [1, [4, b'2\x07O)=j \x89B-\x8eHZ\x98m\xd73z\xc7{a.\x9a\x1c\xd3\rWg\x03\xb7>\x12'], [2, b'\xce\xa5\xfb\x02\x80\x94\xb6\x0b\xf5b&\xc6\x9a\xe3\xca\xd2\xa7g\xc8\x01"\xae\xa3\xf3a%\x7fQ\xbeO4\xb5', [1, [2, b'reply', [3, b'DIDL\x00\x01}\x02']], [2, b'status', [3, b'replied']]]]], [4, b"Q\x95\xa9\x9b.\xfa\xb7@5i?\xa1[\xf78\x0c\xe6\xc2\xffH\xc5&\xdeZ\xee\x12\xa2\xf2\xc61'\x00"]], [4, b'b\x8fi\xc6\x0f&\xd9\x13kz\xfcy\\\xc7\xed\xba\x15.>\x19\xf1\xc0\x90\xc9!\xabl\x8b\xd3\xff\x8d\x00']], [4, b'\x85\xf9\xc4w\x11d\xf7\x02c\xbf\x81\xdfow\xde\xf3\xc6!\xea*K\x00\x07\xddIJ\xc9MwV\xb3o']]], [4, b'\xda\x08\xeb\xa5\xf0?$h\xfbD\xf3=2\xf15\xdex\xa9\x10\xa8\xa6)w\xe90b\x96^\x7f\x9e\x86\x1b']], [4, b'\xc3\xf4\xebI\xde\xf7\x1b6\x82i\xd5\xdb\xd5\x14\xb2I\xda\xc90\xab\x8eJE\x81P\x92:\xbe\xa0\x07\x04\x82']], [4, b"\xcc\xaf\x14iXO\xfa\xe3'[\xfaW\xf3>X\x89\x1e\xb19\xec\x92(v\xe7o\x9c{\x1c\x9c\xe4\x9f]"]]]]]]], [1, [4, b'\xb8.\x9c\xe9\xf4\x06\xadG\x17,W\xa3}\xfe%\x0f\xe7Iv5s\xd7\xb1\x04^\xfe\x99\xde\xf4\xc3\xf3\xb6'], [2, b'time', [3, b'\xbd\xfa\xea\x9b\x94\xd3\xbd\xad\x18']]]], 'signature': b'\x8bW\xe6\xa4y4\xa2\xba.\x973\x93\x07s\x18S\xe8\xe4f\x11\x1b\xcc\xa9\x17|\xd5\xbe\xd2\xce\xe0\xdf\xbeJP\xb0iv\x99+)\xc3\xd1\x1c\x0c\x9d\x86\xbd\x0e', 'delegation': {'subnet_id': b'\x12y\x0eva\xfc\xcd=O\xc818\xdc\xaf\xfd\x9f\x18\x8e\x86{E\xae\x10\xc8\x83m\xd0\xb8\x02', 'certificate': b'\xd9\xd9\xf7\xa2dtree\x83\x01\x82\x04X ,\x0b\xa9\xcb\xd9\xfdAN\tN\xf1\x16\x04\xcd\x8d\xaddQ\xf3\xbf=,\xdf\x7f#\x05\xa4\x1c\\\x97\x98\x96\x83\x01\x83\x01\x82\x04X \xb2\xc2cg~\xc1\xfc\xa7\xe2\xb1\x18o\x94\xaduY\x9c,5h\\\x11\xdf\x19\x9b\x85\xcb\x0e\x16\xa8P\xfd\x83\x02Fsubnet\x83\x01\x83\x01\x83\x01\x83\x01\x82\x04X yMP\xb5\xb9o\x1b\x0b\x1b:\xb1X\x14\xcf\xaa\xb3\xe1Q\xd6v\xd4\xceI\xb5Lk@\x10\xc5?\x18\x83\x01\x83\x01\x83\x02X\x1d\x12y\x0eva\xfc\xcd=O\xc818\xdc\xaf\xfd\x9f\x18\x8e\x86{E\xae\x10\xc8\x83m\xd0\xb8\x02\x83\x01\x83\x02Ocanister_ranges\x82\x03X\x1b\xd9\xd9\xf7\x81\x82J\x00\x00\x00\x00\x01P\x00\x00\x01\x01J\x00\x00\x00\x00\x01_\xff\xff\x01\x01\x83\x02Jpublic_key\x82\x03X\x850\x81\x820\x1d\x06\r+\x06\x01\x04\x01\x82\xdc|\x05\x03\x01\x02\x01\x06\x0c+\x06\x01\x04\x01\x82\xdc|\x05\x03\x02\x01\x03a\x00\x86\xd8\x8e\xbb\xd2\xf1f>e\xd3\xa3\xff\x07\xe8\xee\x9f\xa4 \xd0\x8b\x9ah"\x91\x9f"K\x8b\x80-]\x9b\xe1P\xdcI?\x84\xc2>s\xa0\xcc\x1d,.\xe2\x87\t\xff\x14\x00\x00\x12\x8f\xcd]\xfb\xd7\xb4W\xef:\xf3Dvm\x7f\xf0\x92O\xe7\xa7\xf4V\xde\xd7|\xa6\xde;\x1b@kq\x0cN\xae\xd7(z\xb9\xa3Rvi\x82\x04X \xc9\xaa\x91d\x96\xd6t\x9d\xe9{\x8f( \xe7\xa7X\xf3\x907B&\xd1\xec \xd5\xb1\xa5\x96\xe1.h\xe8\x82\x04X \xb4\x0e"vB\xeffV1M\xf0x\x86N\x10kO\xdb\x9a\xe6\xeap\xcb\x91\x93\xcd\xc1\xce\x9a~\xa3y\x82\x04X \x83\x11\x15\xd9\xd0\x82\xf6\xbb\xc4\xe1\xe1\xe0-\x05\x1d\x14\x7f{I\xa6\xfb\xb7\x02xx\xec\x12\xae\x9bP\xb4\x89\x82\x04X \xaf\xaa\x882\x10\x1b\xce\xe2>\xb8q\xf6\xa3\xb3r\xb9\'\xeb:\xd5\xba\xcb\xbb\xf6z\xa4\xdf)k\xf8\xc4\x93\x82\x04X \rw\xe0\xb1p\\Xs\xc6\xd6\x81\xfcbQ\x8f\xceh\xd4\xba\xd1\x02;S\xb4\x91\xf5l\x9aZ\x11\xa3\xcc\x83\x02Dtime\x82\x03I\xa7\x80\x88\xd6\xb9\xd0\xbd\xad\x18isignatureX0\x88\xa7(\x92\xd17\r\xba\x1cL\x84\xfe\x95T[;Si7o\x9c\x1e=}\xd4\x01H\x9b\xe6\x96\xee\x11@{\x89\x8a\xc2\xb5\xd9JS\xe0\x1fu^X\x91\x1d'}}
+
+
+# ------------- 辅助：从父证书取 canister_ranges，挑一个范围的上下界 -------------
+def _get_ranges_from_parent(cert_dict):
+    cert = Certificate(cert_dict)
+    d = cert.delegation
+    assert d is not None, "样例应当包含 delegation"
+    parent_cert_dict = cbor2.loads(d["certificate"])
+    parent = Certificate(parent_cert_dict)
+    subnet_id = bytes(d["subnet_id"])
+    canister_range = parent.lookup([b"subnet", subnet_id, b"canister_ranges"])
+    assert canister_range is not None, "父证书必须含有 canister_ranges"
+    ranges_raw = cbor2.loads(canister_range)
+    assert isinstance(ranges_raw, list) and len(ranges_raw) >= 1
+    lo, hi = ranges_raw[0]
+    return bytes(lo), bytes(hi)
+
+
+# ========== 测试 1：check_delegation（有 blst：必须验签；无 blst：联调模式） ==========
+def test_check_delegation_authorized():
+    lo, _hi = _get_ranges_from_parent(CERT_SAMPLE)   # 挑下界，保证在区间内
+    cert = Certificate(CERT_SAMPLE)
+
+    if blst_available():
+        der_key = cert.check_delegation(lo, must_verify=True)  # 真验签
+    else:
+        der_key = cert.check_delegation(lo, must_verify=False) # 无 blst 时跳过父证书验签（联调）
+    assert isinstance(der_key, (bytes, bytearray, memoryview))
+    assert len(der_key) == 133
+
+    pk96 = extract_der(der_key)
+    assert isinstance(pk96, (bytes, bytearray, memoryview))
+    assert len(pk96) == 96
+
+
+# ========== 测试 2：check_delegation 未授权路径 ==========
+def test_check_delegation_unauthorized_raises():
+    lo, hi = _get_ranges_from_parent(CERT_SAMPLE)
+    cert = Certificate(CERT_SAMPLE)
+    eff_outside = bytes(hi) + b"\x01"  # 构造一个严格大于 hi 的字节串
+
+    if blst_available():
+        with pytest.raises(ValueError, match="CertificateNotAuthorized"):
+            cert.check_delegation(eff_outside, must_verify=True)
+    else:
+        with pytest.raises(ValueError, match="CertificateNotAuthorized"):
+            cert.check_delegation(eff_outside, must_verify=False)
+
+
+# ========== 测试 3：verify（有 blst：真验签；无 blst：返回材料） ==========
+@pytest.mark.skipif(not blst_available(), reason="blst/pyblst not installed")
+def test_verify_with_blst():
+    lo, _ = _get_ranges_from_parent(CERT_SAMPLE)
+    cert = Certificate(CERT_SAMPLE)
+    assert cert.verify(lo, backend="blst") is True
+
+def test_verify_return_materials():
+    lo, _ = _get_ranges_from_parent(CERT_SAMPLE)
+    cert = Certificate(CERT_SAMPLE)
+    materials = cert.verify(lo, backend="return_materials")
+    assert set(materials.keys()) == {"signature", "message", "der_public_key", "bls_public_key"}
+    assert isinstance(materials["signature"], (bytes, bytearray, memoryview)) and len(materials["signature"]) == 48
+    assert isinstance(materials["message"],   (bytes, bytearray, memoryview)) and len(materials["message"]) == (1 + len(b"ic-state-root") + 32)
+    assert isinstance(materials["der_public_key"], (bytes, bytearray, memoryview)) and len(materials["der_public_key"]) == 133
+    assert isinstance(materials["bls_public_key"], (bytes, bytearray, memoryview)) and len(materials["bls_public_key"]) == 96
