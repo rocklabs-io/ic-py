@@ -87,37 +87,61 @@ KEY_LEN = 96
 
 
 def verify_bls_signature_blst(signature: bytes, message: bytes, public_key_96: bytes) -> bool:
-    """
-    使用 blst(min_sig) 进行验签：
-      - signature: 48字节，G1 压缩（最小签名）
-      - public_key_96: 96字节，G2 压缩（公钥在 G2）
-      - DST: IC 使用的标准 DST（如上）
-    返回 True/False
-    """
+    # 兜底导入：优先 blst，其次 pyblst
     try:
-        import pyblst as blst  # pip install blst
-    except ModuleNotFoundError as e:
-        raise ModuleNotFoundError("blst is not installed. pip install blst") from e
-
-    if not (isinstance(signature, (bytes, bytearray, memoryview)) and
-            isinstance(message, (bytes, bytearray, memoryview)) and
-            isinstance(public_key_96, (bytes, bytearray, memoryview))):
-        raise TypeError("signature, message, public_key_96 must be bytes-like")
+        import blst as _blst
+    except ModuleNotFoundError:
+        import pyblst as _blst  # type: ignore
 
     signature = bytes(signature)
-    message = bytes(message)
     public_key_96 = bytes(public_key_96)
 
-    # 反序列化为椭圆曲线点
-    try:
-        sig_aff = blst.P1_Affine(signature)  # 签名在 G1
-        pk_aff = blst.P2_Affine(public_key_96)  # 公钥在 G2
-    except Exception:
+    # 先做长度/flag 快速校验（不是必须，但能提早发现问题）
+    if len(signature) != 48 or len(public_key_96) != 96:
+        return False
+    # 压缩串的第1字节应带压缩标志位（0x80）
+    if (signature[0] & 0x80) == 0 or (public_key_96[0] & 0x80) == 0:
         return False
 
-    # hash_to_curve = True（IC 使用 XMD:SHA-256_SSWU_RO 方案）
+    print("0")
+
+    # 关键：使用 from_compressed（pyblst 一般需要）
+    try:
+        if hasattr(_blst.P1_Affine, "from_compressed"):
+            sig_aff = _blst.P1_Affine.from_compressed(signature)
+        else:
+            sig_aff = _blst.P1_Affine(signature)  # 某些发行版构造器本身支持压缩
+    except Exception as e:
+        # 临时调试时可以 print(e) 看具体原因（非曲线上/子群检查不过/编码无效）
+        print(e)
+        return False
+
+    print("1")
+
+    try:
+        if hasattr(_blst.P2_Affine, "from_compressed"):
+            pk_aff = _blst.P2_Affine.from_compressed(public_key_96)
+        else:
+            pk_aff = _blst.P2_Affine(public_key_96)
+    except Exception as e:
+        return False
+
+    print("2")
+
+    # 方案 A：core_verify（和你原来一致）
     err = sig_aff.core_verify(pk_aff, True, message, IC_BLS_DST, None)
-    return err == blst.BLST_ERROR.BLST_SUCCESS
+    if err == _blst.BLST_ERROR.BLST_SUCCESS:
+        return True
+
+    print("3")
+
+    # 方案 B（可选）：用 Pairing 做一次独立验证，帮助诊断
+    try:
+        pairing = _blst.Pairing(True, IC_BLS_DST)
+        pairing.aggregate(pk_aff, sig_aff, message, None)
+        return pairing.finalverify()
+    except Exception:
+        return False
 
 
 def extract_der(der: bytes) -> bytes:
