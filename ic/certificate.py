@@ -86,60 +86,79 @@ DER_PREFIX = bytes.fromhex(
 KEY_LEN = 96
 
 
+class BlstUnavailable(RuntimeError):
+    """Raised when the runtime doesn't provide the official 'blst' Python binding."""
+
+
+def ensure_blst_available() -> "object":
+    """
+    确认宿主环境具备官方 blst 绑定，并返回 blst 模块。
+    - 未安装：抛 BlstUnavailable，包含清晰安装指引
+    - API 不完整：抛 BlstUnavailable，提示可能导入了错误的同名模块
+    """
+    try:
+        import blst as _blst  # 官方 supranational/blst SWIG 绑定
+    except ModuleNotFoundError as e:
+        raise BlstUnavailable(
+            "BLS verification requires the official 'blst' Python binding.\n"
+            "It was not found in the current environment.\n\n"
+            "Install steps (macOS/Linux):\n"
+            "  1) git clone https://github.com/supranational/blst\n"
+            "  2) cd blst/bindings/python && python3 run.me\n"
+            "  3) Ensure this directory is on PYTHONPATH or copy blst.py and _blst*.so into site-packages\n\n"
+            "For Apple Silicon (M1/M2), if you hit ABI issues: export BLST_PORTABLE=1 before running run.me"
+        ) from e
+
+    # 简单 API 自检，避免被其它同名模块“遮蔽”
+    required = ("P1_Affine", "P2_Affine", "Pairing", "BLST_ERROR")
+    if not all(hasattr(_blst, name) for name in required):
+        raise BlstUnavailable(
+            "A module named 'blst' was imported, but it does not expose the expected API.\n"
+            "Make sure you're using the official supranational/blst SWIG binding, not a different package."
+        )
+    return _blst
+
+
 def verify_bls_signature_blst(signature: bytes, message: bytes, public_key_96: bytes) -> bool:
-    # 兜底导入：优先 blst，其次 pyblst
+    """
+    用官方 blst 对 (signature, message, public_key) 做 BLS12-381 MinSig 验证。
+    - 签名：G1 压缩（48B）
+    - 公钥：G2 压缩（96B）
+    - DST：IC 使用的 G1 ciphersuite
+
+    返回 True/False，不抛异常（方便上层处理）。
+    """
     try:
-        import blst as _blst
-    except ModuleNotFoundError:
-        import pyblst as _blst  # type: ignore
-
-    signature = bytes(signature)
-    public_key_96 = bytes(public_key_96)
-
-    # 先做长度/flag 快速校验（不是必须，但能提早发现问题）
-    if len(signature) != 48 or len(public_key_96) != 96:
-        return False
-    # 压缩串的第1字节应带压缩标志位（0x80）
-    if (signature[0] & 0x80) == 0 or (public_key_96[0] & 0x80) == 0:
+        _blst = ensure_blst_available()
+    except BlstUnavailable:
+        # 这里选择返回 False；如果你更希望上层感知环境缺失，可以把这里改成：raise
         return False
 
-    print("0")
+    sig = bytes(signature)
+    pk  = bytes(public_key_96)
+    msg = bytes(message)
 
-    # 关键：使用 from_compressed（pyblst 一般需要）
+    # 基本长度校验（失败直接 False）
+    if len(sig) != 48 or len(pk) != 96:
+        return False
+
+    # 解码压缩点（官方 SWIG 绑定构造器支持压缩编码）
     try:
-        if hasattr(_blst.P1_Affine, "from_compressed"):
-            sig_aff = _blst.P1_Affine.from_compressed(signature)
-        else:
-            sig_aff = _blst.P1_Affine(signature)  # 某些发行版构造器本身支持压缩
-    except Exception as e:
-        # 临时调试时可以 print(e) 看具体原因（非曲线上/子群检查不过/编码无效）
-        print(e)
+        sig_aff = _blst.P1_Affine(sig)  # G1 compressed 48B
+        pk_aff  = _blst.P2_Affine(pk)   # G2 compressed 96B
+    except Exception:
         return False
 
-    print("1")
-
-    try:
-        if hasattr(_blst.P2_Affine, "from_compressed"):
-            pk_aff = _blst.P2_Affine.from_compressed(public_key_96)
-        else:
-            pk_aff = _blst.P2_Affine(public_key_96)
-    except Exception as e:
-        return False
-
-    print("2")
-
-    # 方案 A：core_verify（和你原来一致）
-    err = sig_aff.core_verify(pk_aff, True, message, IC_BLS_DST, None)
+    # 路径A：core_verify（最快）
+    err = sig_aff.core_verify(pk_aff, True, msg, IC_BLS_DST, None)
     if err == _blst.BLST_ERROR.BLST_SUCCESS:
         return True
 
-    print("3")
-
-    # 方案 B（可选）：用 Pairing 做一次独立验证，帮助诊断
+    # 路径B（可选的二次确认，方便诊断）：Pairing.finalverify
     try:
         pairing = _blst.Pairing(True, IC_BLS_DST)
-        pairing.aggregate(pk_aff, sig_aff, message, None)
-        return pairing.finalverify()
+        pairing.aggregate(pk_aff, sig_aff, msg, None)
+        return bool(pairing.finalverify())
     except Exception:
         return False
 
