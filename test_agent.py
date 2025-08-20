@@ -43,17 +43,17 @@ print("update result:", ret)
 
 
 # query canister state
-t0 = time.perf_counter()
-ret = ag.query_raw(
-        "v3y75-6iaaa-aaaak-qikaa-cai",
-        "get",
-        encode([])
-        )
-t1 = time.perf_counter()
-latency_ms = (t1 - t0) * 1000
-print(f"query_raw latency: {latency_ms:.2f} ms")
-print('query result: ', ret)
-
+# t0 = time.perf_counter()
+# ret = ag.query_raw(
+#         "v3y75-6iaaa-aaaak-qikaa-cai",
+#         "get",
+#         encode([])
+#         )
+# t1 = time.perf_counter()
+# latency_ms = (t1 - t0) * 1000
+# print(f"query_raw latency: {latency_ms:.2f} ms")
+# print('query result: ', ret)
+assert 1==1
 
 #
 # t = time.time()

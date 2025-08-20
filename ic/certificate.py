@@ -120,48 +120,54 @@ def ensure_blst_available() -> "object":
 
 
 def verify_bls_signature_blst(signature: bytes, message: bytes, public_key_96: bytes) -> bool:
-    """
-    用官方 blst 对 (signature, message, public_key) 做 BLS12-381 MinSig 验证。
-    - 签名：G1 压缩（48B）
-    - 公钥：G2 压缩（96B）
-    - DST：IC 使用的 G1 ciphersuite
-
-    返回 True/False，不抛异常（方便上层处理）。
-    """
+    # 兜底导入：优先 blst，其次 pyblst
     try:
-        _blst = ensure_blst_available()
-    except BlstUnavailable:
-        # 这里选择返回 False；如果你更希望上层感知环境缺失，可以把这里改成：raise
+        import blst as _blst
+    except ModuleNotFoundError:
+        import pyblst as _blst  # type: ignore
+
+    signature = bytes(signature)
+    public_key_96 = bytes(public_key_96)
+
+    # 先做长度/flag 快速校验（不是必须，但能提早发现问题）
+    if len(signature) != 48 or len(public_key_96) != 96:
+        return False
+    # 压缩串的第1字节应带压缩标志位（0x80）
+    if (signature[0] & 0x80) == 0 or (public_key_96[0] & 0x80) == 0:
         return False
 
-    sig = bytes(signature)
-    pk  = bytes(public_key_96)
-    msg = bytes(message)
-
-    # 基本长度校验（失败直接 False）
-    if len(sig) != 48 or len(pk) != 96:
-        return False
-
-    # 解码压缩点（官方 SWIG 绑定构造器支持压缩编码）
+    # 关键：使用 from_compressed（pyblst 一般需要）
     try:
-        sig_aff = _blst.P1_Affine(sig)  # G1 compressed 48B
-        pk_aff  = _blst.P2_Affine(pk)   # G2 compressed 96B
-    except Exception:
+        if hasattr(_blst.P1_Affine, "from_compressed"):
+            sig_aff = _blst.P1_Affine.from_compressed(signature)
+        else:
+            sig_aff = _blst.P1_Affine(signature)  # 某些发行版构造器本身支持压缩
+    except Exception as e:
+        # 临时调试时可以 print(e) 看具体原因（非曲线上/子群检查不过/编码无效）
+        print(e)
         return False
 
-    # 路径A：core_verify（最快）
-    err = sig_aff.core_verify(pk_aff, True, msg, IC_BLS_DST, None)
-    if err == _blst.BLST_ERROR.BLST_SUCCESS:
+    try:
+        if hasattr(_blst.P2_Affine, "from_compressed"):
+            pk_aff = _blst.P2_Affine.from_compressed(public_key_96)
+        else:
+            pk_aff = _blst.P2_Affine(public_key_96)
+    except Exception as e:
+        return False
+
+    # 方案 A：core_verify（和你原来一致）
+    err = sig_aff.core_verify(pk_aff, True, message, IC_BLS_DST, None)
+    if err == _blst.BLST_SUCCESS:
         return True
 
-    # 路径B（可选的二次确认，方便诊断）：Pairing.finalverify
+
+    # 方案 B（可选）：用 Pairing 做一次独立验证，帮助诊断
     try:
         pairing = _blst.Pairing(True, IC_BLS_DST)
-        pairing.aggregate(pk_aff, sig_aff, msg, None)
-        return bool(pairing.finalverify())
+        pairing.aggregate(pk_aff, sig_aff, message, None)
+        return pairing.finalverify()
     except Exception:
         return False
-
 
 def extract_der(der: bytes) -> bytes:
     if not isinstance(der, (bytes, bytearray, memoryview)):
@@ -357,11 +363,11 @@ class Certificate:
         # 4) （⭐ 新增）父证书加密验签（与 Rust 等价）
         if must_verify:
             # 要求严格验证：如未安装 blst 或验证失败，将抛出异常
+            # must_verify=False 时跳过（仅用于联调；不安全）
             ok = parent_cert.verify(eff, backend="blst")
             if ok is not True:
                 # parent_cert.verify("blst") 正常通过会返回 True；不应返回 dict
                 raise ValueError("ParentCertificateVerificationFailed")
-        # must_verify=False 时跳过（仅用于联调；不安全）
 
         # 5) 读取 canister_ranges，并校验授权范围
         canister_range_path = [b"subnet", subnet_id, b"canister_ranges"]
