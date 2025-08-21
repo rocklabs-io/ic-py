@@ -54,6 +54,9 @@ import cbor2
 from enum import Enum
 from typing import Any, Dict, List, Optional, Sequence, Union
 
+from ic.principal import Principal
+
+
 class NodeId(Enum):
     Empty = 0
     Fork = 1
@@ -69,7 +72,7 @@ def domain_sep(s: str) -> bytes:
     return bytes([len(b)]) + b
 
 IC_STATE_ROOT_DOMAIN_SEPARATOR = b"\x0Dic-state-root"
-IC_BLS_DST = b"BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_"  # 与 IC Rust 实现一致
+IC_BLS_DST = b"BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_"
 IC_ROOT_KEY = bytes.fromhex(
     "308182301d060d2b0601040182dc7c0503010201060c2b0601040182dc7c05030201036100"
     "814c0e6ec71fab583b08bd81373c255c3c371b2e84863c98a4f1e08b74235d14fb5d9c0cd5"
@@ -118,56 +121,61 @@ def ensure_blst_available() -> "object":
         )
     return _blst
 
-
 def verify_bls_signature_blst(signature: bytes, message: bytes, public_key_96: bytes) -> bool:
-    # 兜底导入：优先 blst，其次 pyblst
+    """
+    使用官方 blst(SWIG) 做 BLS12-381 MinSig 验签：
+      - 签名：G1 压缩（48B）
+      - 公钥：G2 压缩（96B）
+      - DST：IC_BLS_DST（G1 ciphersuite）
+    成功返回 True；失败返回 False。
+    若运行环境没有 blst，抛 RuntimeError（包含安装指引）。
+    """
     try:
-        import blst as _blst
-    except ModuleNotFoundError:
-        import pyblst as _blst  # type: ignore
+        import blst as _blst  # 仅官方 supranational/blst 绑定
+    except ModuleNotFoundError as e:
+        raise RuntimeError(
+            "BLS verification requires the official 'blst' Python binding, "
+            "but it was not found.\n\n"
+            "Install (macOS/Linux):\n"
+            "  1) git clone https://github.com/supranational/blst\n"
+            "  2) cd blst/bindings/python && python3 run.me\n"
+            "  3) 将该目录加入 PYTHONPATH，或把生成的 blst.py 和 _blst*.so 复制到 site-packages\n\n"
+            "Apple Silicon (M1/M2) 如遇 ABI/架构问题：\n"
+            "  export BLST_PORTABLE=1  &&  python3 run.me"
+        ) from e
 
-    signature = bytes(signature)
-    public_key_96 = bytes(public_key_96)
+    sig = bytes(signature)
+    pk  = bytes(public_key_96)
+    msg = bytes(message)
 
-    # 先做长度/flag 快速校验（不是必须，但能提早发现问题）
-    if len(signature) != 48 or len(public_key_96) != 96:
+    # 基本长度/压缩位检查
+    if len(sig) != 48 or len(pk) != 96:
         return False
-    # 压缩串的第1字节应带压缩标志位（0x80）
-    if (signature[0] & 0x80) == 0 or (public_key_96[0] & 0x80) == 0:
+    if (sig[0] & 0x80) == 0 or (pk[0] & 0x80) == 0:
         return False
 
-    # 关键：使用 from_compressed（pyblst 一般需要）
+    # 构造仿射点（官方 SWIG 绑定构造器本身接受压缩编码；若存在 from_compressed 也兼容调用）
     try:
-        if hasattr(_blst.P1_Affine, "from_compressed"):
-            sig_aff = _blst.P1_Affine.from_compressed(signature)
-        else:
-            sig_aff = _blst.P1_Affine(signature)  # 某些发行版构造器本身支持压缩
-    except Exception as e:
-        # 临时调试时可以 print(e) 看具体原因（非曲线上/子群检查不过/编码无效）
-        print(e)
+        P1_ctor = getattr(_blst.P1_Affine, "from_compressed", _blst.P1_Affine)
+        P2_ctor = getattr(_blst.P2_Affine, "from_compressed", _blst.P2_Affine)
+        sig_aff = P1_ctor(sig)
+        pk_aff  = P2_ctor(pk)
+    except Exception:
         return False
 
-    try:
-        if hasattr(_blst.P2_Affine, "from_compressed"):
-            pk_aff = _blst.P2_Affine.from_compressed(public_key_96)
-        else:
-            pk_aff = _blst.P2_Affine(public_key_96)
-    except Exception as e:
-        return False
-
-    # 方案 A：core_verify（和你原来一致）
-    err = sig_aff.core_verify(pk_aff, True, message, IC_BLS_DST, None)
+    # 路径 A：core_verify
+    err = sig_aff.core_verify(pk_aff, True, msg, IC_BLS_DST, None)
     if err == _blst.BLST_SUCCESS:
         return True
 
-
-    # 方案 B（可选）：用 Pairing 做一次独立验证，帮助诊断
+    # 路径 B：Pairing.finalverify（可作为诊断回退）
     try:
         pairing = _blst.Pairing(True, IC_BLS_DST)
-        pairing.aggregate(pk_aff, sig_aff, message, None)
-        return pairing.finalverify()
+        pairing.aggregate(pk_aff, sig_aff, msg, None)
+        return bool(pairing.finalverify())
     except Exception:
         return False
+
 
 def extract_der(der: bytes) -> bytes:
     if not isinstance(der, (bytes, bytearray, memoryview)):
@@ -433,13 +441,38 @@ class Certificate:
             }
 
         if backend in ("auto", "blst"):
-            # 用 blst 做最终验签
             ok = verify_bls_signature_blst(sig, msg, bls_pubkey_96)  # 若没装 blst，会抛 ModuleNotFoundError
             if not ok:
                 raise ValueError("CertificateVerificationFailed")
             return True
 
         raise ValueError(f"Unknown backend: {backend}")
+
+    def assert_certificate_valid(self,
+                                 effective_canister_id: Union[str, bytes, bytearray, memoryview]) -> None:
+        """
+        验证给定 Certificate 是否对 effective_canister_id 有效。
+        - 成功：返回 None（继续向下执行）
+        - 失败：抛出异常（让上层捕获/继续抛出）
+        说明：
+        - 强制使用 blst 后端，环境缺失会抛出带安装指引的错误信息
+        - 可能抛出的异常包括：解析错误、授权失败、BLS 验签失败、blst 环境缺失等
+        """
+        eff = _to_effective_canister_bytes(effective_canister_id)
+
+        # 这里不吞异常，保持“失败就抛出”的语义
+        res = self.verify(eff, backend="blst")
+
+        # 按你的 verify 语义，成功应当返回 True；其它情况统一视为失败
+        if res is True:
+            return
+
+        # 若你未来改了 verify 的返回值（比如返回字符串提示 blst 缺失），这里做个防御性处理：
+        if isinstance(res, str):
+            # blst 缺失等环境问题，res 为错误信息
+            raise RuntimeError(f"BLS backend unavailable: {res}")
+
+        raise RuntimeError("invalid certificate: BLS verification failed")
 
     @staticmethod
     def _to_bytes(x: Union[str, bytes, bytearray, memoryview]) -> bytes:
@@ -451,5 +484,16 @@ class Certificate:
             return x
         raise TypeError(f"expected bytes-like or str, got {type(x)}")
 
+def _to_effective_canister_bytes(eid: Union[str, bytes, bytearray, memoryview]) -> bytes:
+    """
+    把传入的 canister id 统一成原始字节：
+    - str：按 IC 文本格式解码（带校验） -> bytes
+    - bytes/bytearray/memoryview：直接转 bytes
+    """
+    if isinstance(eid, str):
+        return Principal.from_str(eid).bytes
+    if isinstance(eid, (bytes, bytearray, memoryview)):
+        return bytes(eid)
+    raise TypeError(f"unsupported effective_canister_id type: {type(eid)}")
 
 # TODO: 单元测试

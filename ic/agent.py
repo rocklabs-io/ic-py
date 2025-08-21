@@ -142,10 +142,7 @@ class Agent:
             decoded_certificate = cbor2.loads(cbor_certificate)
             # TODO: 在这儿verify cert
             certificate = Certificate(decoded_certificate)
-            eid_bytes = Principal.from_str(eid).bytes
-            if not certificate.verify(eid_bytes):
-                return RuntimeError("invalid certificate: " + str(decoded_certificate))
-
+            certificate.assert_certificate_valid(canister_id)
             status = certificate.lookup_request_status(req_id)
             if status == "replied":
                 reply_data = certificate.lookup_reply(req_id)
