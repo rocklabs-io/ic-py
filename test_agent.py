@@ -51,17 +51,20 @@ def test_update_raw_sync(ag):
 
     assert ret is not None
 
-# query canister state
-# t0 = time.perf_counter()
-# ret = ag.query_raw(
-#         CANISTER_ID_TEXT,
-#         "get",
-#         encode([])
-#         )
-# t1 = time.perf_counter()
-# latency_ms = (t1 - t0) * 1000
-# print(f"query_raw latency: {latency_ms:.2f} ms")
-# print('query result: ', ret)
+
+def test_query_raw_sync(ag):
+    t0 = time.perf_counter()
+    ret = ag.query_raw(
+            CANISTER_ID_TEXT,
+            "get",
+            encode([])
+            )
+    t1 = time.perf_counter()
+    latency_ms = (t1 - t0) * 1000
+    print(f"query_raw latency: {latency_ms:.2f} ms")
+    print('query result: ', ret)
+
+    assert ret is not None
 
 #
 # t = time.time()

@@ -382,6 +382,8 @@ class Certificate:
                 raise ValueError("ParentCertificateVerificationFailed")
 
         # 5) 读取 canister_ranges，并校验授权范围
+        # Checks if a principal is contained within a list of principal ranges
+        #  A range is a tuple: (low: Principal, high: Principal), as described here: https://internetcomputer.org/docs/current/references/ic-interface-spec#state-tree-subnet
         canister_range_path = [b"subnet", subnet_id, b"canister_ranges"]
         canister_range = parent_cert.lookup(canister_range_path)
         if canister_range is None:
