@@ -50,9 +50,13 @@ Lookup:
     find_label(l, _)                                                 = Unknown
 '''
 import hashlib
+import time
+
 import cbor2
 from enum import Enum
 from typing import Any, Dict, List, Optional, Sequence, Union
+
+import leb128
 
 from ic.principal import Principal
 
@@ -372,7 +376,7 @@ class Certificate:
         if must_verify:
             # 要求严格验证：如未安装 blst 或验证失败，将抛出异常
             # must_verify=False 时跳过（仅用于联调；不安全）
-            ok = parent_cert.verify(eff, backend="blst")
+            ok = parent_cert.verify_cert(eff, backend="blst")
             if ok is not True:
                 # parent_cert.verify("blst") 正常通过会返回 True；不应返回 dict
                 raise ValueError("ParentCertificateVerificationFailed")
@@ -404,7 +408,7 @@ class Certificate:
 
         return der_key
 
-    def verify(self, effective_canister_id, *, backend: str = "auto"):
+    def verify_cert(self, effective_canister_id, *, backend: str = "auto"):
         """
         对应 Rust verify_cert：
           - msg = b'\x0D' + 'ic-state-root' + root_hash
@@ -461,7 +465,7 @@ class Certificate:
         eff = _to_effective_canister_bytes(effective_canister_id)
 
         # 这里不吞异常，保持“失败就抛出”的语义
-        res = self.verify(eff, backend="blst")
+        res = self.verify_cert(eff, backend="blst")
 
         # 按你的 verify 语义，成功应当返回 True；其它情况统一视为失败
         if res is True:
@@ -473,6 +477,32 @@ class Certificate:
             raise RuntimeError(f"BLS backend unavailable: {res}")
 
         raise RuntimeError("invalid certificate: BLS verification failed")
+
+    def verify_cert_timestamp(self, ingress_expiry_ns: int) -> None:
+        """
+        等价于 Rust 的 verify_cert_timestamp：
+        - 取证书内时间戳（纳秒）
+        - 与当前 UTC 时间做差的绝对值不得超过 ingress_expiry_ns
+        - 通过则返回 None；超出则抛异常
+        """
+        cert_time_ns = self.lookup_time()
+        now_ns = time.time_ns()
+        skew = abs(now_ns - cert_time_ns)
+        print("verify_cert_timestamp skew:", skew)
+        if skew > int(ingress_expiry_ns):
+            raise ValueError(
+                f"CertificateOutdated: skew={skew}ns > allowed={ingress_expiry_ns}ns"
+            )
+
+    def lookup_time(self) -> int:
+        v = self.lookup([b"time"])
+        if v is None:
+            raise ValueError("Missing 'time' in certificate")
+        try:
+            # 证书里的 time 是 ULEB128（单位：纳秒）
+            return leb128.u.decode(bytes(v))
+        except Exception as e:
+            raise ValueError("Invalid 'time' encoding (expected ULEB128)") from e
 
     @staticmethod
     def _to_bytes(x: Union[str, bytes, bytearray, memoryview]) -> bytes:
@@ -495,5 +525,3 @@ def _to_effective_canister_bytes(eid: Union[str, bytes, bytearray, memoryview]) 
     if isinstance(eid, (bytes, bytearray, memoryview)):
         return bytes(eid)
     raise TypeError(f"unsupported effective_canister_id type: {type(eid)}")
-
-# TODO: 单元测试

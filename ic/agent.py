@@ -14,6 +14,8 @@ DEFAULT_INITIAL_DELAY = 0.5    # 500 ms
 DEFAULT_MAX_INTERVAL   = 1.0    # 1 s
 DEFAULT_MULTIPLIER     = 1.4
 
+NANOSECONDS = 1_000_000_000
+
 def sign_request(req, iden):
     req_id = to_request_id(req)
     msg = IC_REQUEST_DOMAIN_SEPARATOR + req_id
@@ -118,8 +120,7 @@ class Agent:
         else:
             raise Exception("Unknown status: " + str(result.get('status')))
 
-    # TODO: verify certificate - Milestone2
-    def update_raw(self, canister_id, method_name, arg, return_type = None, effective_canister_id = None):
+    def update_raw(self, canister_id, method_name, arg, return_type = None, effective_canister_id = None, verify_certificate: bool = False):
         req = {
             'request_type': "call",
             'sender': self.identity.sender().bytes,
@@ -140,9 +141,11 @@ class Agent:
         if status == "replied":
             cbor_certificate = response['certificate']
             decoded_certificate = cbor2.loads(cbor_certificate)
-            # TODO: 在这儿verify cert
             certificate = Certificate(decoded_certificate)
-            certificate.assert_certificate_valid(canister_id)
+            if verify_certificate:
+                certificate.assert_certificate_valid(canister_id)
+                certificate.verify_cert_timestamp(self.ingress_expiry * NANOSECONDS)
+
             status = certificate.lookup_request_status(req_id)
             if status == "replied":
                 reply_data = certificate.lookup_reply(req_id)

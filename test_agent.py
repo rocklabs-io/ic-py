@@ -42,7 +42,7 @@ def test_update_raw_sync(ag):
     arg = encode([])
 
     t0 = time.perf_counter()
-    ret = ag.update_raw(CANISTER_ID_TEXT, "set", arg)
+    ret = ag.update_raw(CANISTER_ID_TEXT, "set", arg, verify_certificate=True)
     t1 = time.perf_counter()
 
     latency_ms = (t1 - t0) * 1000
@@ -54,7 +54,7 @@ def test_update_raw_sync(ag):
 # query canister state
 # t0 = time.perf_counter()
 # ret = ag.query_raw(
-#         "v3y75-6iaaa-aaaak-qikaa-cai",
+#         CANISTER_ID_TEXT,
 #         "get",
 #         encode([])
 #         )
