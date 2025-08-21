@@ -488,7 +488,6 @@ class Certificate:
         cert_time_ns = self.lookup_time()
         now_ns = time.time_ns()
         skew = abs(now_ns - cert_time_ns)
-        print("verify_cert_timestamp skew:", skew)
         if skew > int(ingress_expiry_ns):
             raise ValueError(
                 f"CertificateOutdated: skew={skew}ns > allowed={ingress_expiry_ns}ns"

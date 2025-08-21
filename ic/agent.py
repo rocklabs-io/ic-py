@@ -155,9 +155,9 @@ class Agent:
                 rejection = certificate.lookup_request_rejection(req_id)
                 raise RuntimeError(f"Call rejected (code={rejection['reject_code']}): {rejection['reject_message']} [error_code={rejection.get('error_code')}]")
             else:
-                return self.poll_and_wait(eid, req_id, return_type=return_type)
+                return self.poll_and_wait(eid, req_id, verify_certificate, return_type=return_type)
         elif status == "accepted":
-            return self.poll_and_wait(eid, req_id, return_type=return_type)
+            return self.poll_and_wait(eid, req_id, verify_certificate, return_type=return_type)
         elif status == "non_replicated_rejection":
             code = response["reject_code"]
             message = response["reject_message"]
@@ -250,8 +250,8 @@ class Agent:
         else:
             return status.decode(), cert
 
-    def poll_and_wait(self, canister_id, req_id, return_type=None):
-        status, result = self.poll(canister_id, req_id)
+    def poll_and_wait(self, canister_id, req_id, verify_certificate, return_type=None):
+        status, result = self.poll(canister_id, req_id, verify_certificate)
         if status == "replied":
             decoded_data = decode(result, return_type)
             return decoded_data
@@ -267,6 +267,7 @@ class Agent:
             self,
             canister_id,
             req_id,
+            verify_certificate,
             *,
             initial_delay: float = DEFAULT_INITIAL_DELAY,
             max_interval: float = DEFAULT_MAX_INTERVAL,
@@ -294,6 +295,10 @@ class Agent:
         while True:
             status, raw_cert = self.request_status_raw(canister_id, req_id)
             cert = Certificate(raw_cert)
+            if verify_certificate:
+                cert.assert_certificate_valid(canister_id)
+                cert.verify_cert_timestamp(self.ingress_expiry * NANOSECONDS)
+
             if status in ("replied", "done", "rejected"):
                 break
 
