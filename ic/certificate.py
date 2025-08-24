@@ -109,9 +109,12 @@ def verify_bls_signature_blst(signature: bytes, message: bytes, public_key_96: b
         return False
 
     # Path A: core_verify
-    err = sig_aff.core_verify(pk_aff, True, msg_bytes, IC_BLS_DST, None)
-    if err == _blst.BLST_SUCCESS:
-        return True
+    try:
+        err = sig_aff.core_verify(pk_aff, True, msg_bytes, IC_BLS_DST, None)
+        if err == _blst.BLST_SUCCESS:
+            return True
+    except Exception:
+        return False
 
     # Path B: pairing-based verification as a fallback/diagnostic
     try:
