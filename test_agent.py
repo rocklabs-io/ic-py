@@ -5,7 +5,6 @@ from ic.identity import *
 from ic.client import *
 from ic.candid import encode
 
-# update canister state
 CANISTER_ID_TEXT = "wcrzb-2qaaa-aaaap-qhpgq-cai"
 
 @pytest.fixture(scope="session")

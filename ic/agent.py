@@ -68,8 +68,8 @@ class Agent:
         raw_bytes = await self.client.query_async(canister_id, data)
         return cbor2.loads(raw_bytes)
 
-    def call_endpoint(self, canister_id, request_id, data):
-        return self.client.call(canister_id, request_id, data)
+    def call_endpoint(self, canister_id, data):
+        return self.client.call(canister_id, data)
 
     async def call_endpoint_async(self, canister_id, request_id, data):
         await self.client.call_async(canister_id, request_id, data)
@@ -153,7 +153,7 @@ class Agent:
         request_id, signed_cbor = sign_request(req, self.identity)
         effective_id = canister_id if effective_canister_id is None else effective_canister_id
 
-        http_response: httpx.Response = self.call_endpoint(effective_id, request_id, signed_cbor)
+        http_response: httpx.Response = self.call_endpoint(effective_id, signed_cbor)
         response_obj = cbor2.loads(http_response.content)
 
         if not isinstance(response_obj, dict) or "status" not in response_obj:

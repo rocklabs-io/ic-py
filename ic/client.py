@@ -7,58 +7,62 @@ DEFAULT_TIMEOUT_SEC = 360.0
 DEFAULT_TIMEOUT = Timeout(DEFAULT_TIMEOUT_SEC)
 
 class Client:
-    def __init__(self, url = "https://ic0.app"):
+    def __init__(self, url: str = "https://ic0.app"):
         self.url = url
 
-    def query(self, canister_id, data, *, timeout = DEFAULT_TIMEOUT):
-        endpoint = self.url + '/api/v2/canister/' + canister_id + '/query'
-        headers = {'Content-Type': 'application/cbor'}
-        ret = httpx.post(endpoint, data = data, headers=headers, timeout=timeout)
-        return ret.content
+    # --------- sync ---------
 
-    def call(self, canister_id, req_id, data, *, timeout = DEFAULT_TIMEOUT):
-        # reference : https://forum.dfinity.org/t/reducing-end-to-end-latencies-on-the-internet-computer/34383
-        endpoint = self.url + '/api/v3/canister/' + canister_id + '/call'
-        headers = {'Content-Type': 'application/cbor'}
-        response = httpx.post(endpoint, data = data, headers=headers, timeout=timeout)
-        return response
+    def query(self, canister_id: str, data: bytes, *, timeout: Timeout = DEFAULT_TIMEOUT) -> bytes:
+        endpoint = f"{self.url}/api/v2/canister/{canister_id}/query"
+        headers = {"Content-Type": "application/cbor"}
+        resp = httpx.post(endpoint, content=data, headers=headers, timeout=timeout)
+        return resp.content
 
-    def read_state(self, canister_id, data, *, timeout = DEFAULT_TIMEOUT):
-        endpoint = self.url + '/api/v2/canister/' + canister_id + '/read_state'
-        headers = {'Content-Type': 'application/cbor'}
-        ret = httpx.post(endpoint, data = data, headers=headers, timeout=timeout)
-        return ret.content
+    def call(self, canister_id: str, data: bytes, *, timeout: Timeout = DEFAULT_TIMEOUT) -> httpx.Response:
+        # v3 endpoint
+        endpoint = f"{self.url}/api/v3/canister/{canister_id}/call"
+        headers = {"Content-Type": "application/cbor"}
+        resp = httpx.post(endpoint, content=data, headers=headers, timeout=timeout)
+        return resp
 
-    def status(self, *, timeout = DEFAULT_TIMEOUT):
-        endpoint = self.url + '/api/v2/status'
-        ret = httpx.get(endpoint, timeout=timeout)
-        print('client.status:', ret.text)
-        return ret.content
+    def read_state(self, canister_id: str, data: bytes, *, timeout: Timeout = DEFAULT_TIMEOUT) -> bytes:
+        endpoint = f"{self.url}/api/v2/canister/{canister_id}/read_state"
+        headers = {"Content-Type": "application/cbor"}
+        resp = httpx.post(endpoint, content=data, headers=headers, timeout=timeout)
+        return resp.content
 
-    async def query_async(self, canister_id, data, *, timeout = DEFAULT_TIMEOUT):
+    def status(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> bytes:
+        endpoint = f"{self.url}/api/v2/status"
+        resp = httpx.get(endpoint, timeout=timeout)
+        print("client.status:", resp.text)
+        return resp.content
+
+    # --------- async ---------
+
+    async def query_async(self, canister_id: str, data: bytes, *, timeout: Timeout = DEFAULT_TIMEOUT) -> bytes:
         async with httpx.AsyncClient(timeout=timeout) as client:
-            endpoint = self.url + '/api/v2/canister/' + canister_id + '/query'
-            headers = {'Content-Type': 'application/cbor'}
-            ret = await client.post(endpoint, data = data, headers=headers)
-            return ret.content
+            endpoint = f"{self.url}/api/v2/canister/{canister_id}/query"
+            headers = {"Content-Type": "application/cbor"}
+            resp = await client.post(endpoint, content=data, headers=headers)
+            return resp.content
 
-    async def call_async(self, canister_id, req_id, data, *, timeout = DEFAULT_TIMEOUT):
+    async def call_async(self, canister_id: str, req_id: bytes, data: bytes, *, timeout: Timeout = DEFAULT_TIMEOUT) -> bytes:
         async with httpx.AsyncClient(timeout=timeout) as client:
-            endpoint = self.url + '/api/v2/canister/' + canister_id + '/call'
-            headers = {'Content-Type': 'application/cbor'}
-            await client.post(endpoint, data = data, headers=headers)
+            endpoint = f"{self.url}/api/v2/canister/{canister_id}/call"
+            headers = {"Content-Type": "application/cbor"}
+            await client.post(endpoint, content=data, headers=headers)
             return req_id
 
-    async def read_state_async(self, canister_id, data, *, timeout = DEFAULT_TIMEOUT):
+    async def read_state_async(self, canister_id: str, data: bytes, *, timeout: Timeout = DEFAULT_TIMEOUT) -> bytes:
         async with httpx.AsyncClient(timeout=timeout) as client:
-            endpoint = self.url + '/api/v2/canister/' + canister_id + '/read_state'
-            headers = {'Content-Type': 'application/cbor'}
-            ret = await client.post(endpoint, data = data, headers=headers)
-            return ret.content
+            endpoint = f"{self.url}/api/v2/canister/{canister_id}/read_state"
+            headers = {"Content-Type": "application/cbor"}
+            resp = await client.post(endpoint, content=data, headers=headers)
+            return resp.content
 
-    async def status_async(self, *, timeout = DEFAULT_TIMEOUT):
+    async def status_async(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> bytes:
         async with httpx.AsyncClient(timeout=timeout) as client:
-            endpoint = self.url + '/api/v2/status'
-            ret = await client.get(endpoint)
-            print('client.status:', ret.text)
-            return ret.content
+            endpoint = f"{self.url}/api/v2/status"
+            resp = await client.get(endpoint)
+            print("client.status:", resp.text)
+            return resp.content
