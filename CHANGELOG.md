@@ -1,21 +1,34 @@
 # Changelog
-All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [2.0.0] - 2025-08-26
 
-## [Unreleased]
-
-## 2025-08-24
 ### Added
-- **Optional certificate verification** for update calls:
-  - `Agent.update_raw(..., verify_certificate: bool = False)` — when set to `True`, the agent verifies the certified response using BLS signatures (minsig: G1 signature, G2 public key).
-  - Verification uses the official [`blst`](https://github.com/supranational/blst) Python binding. If `blst` is not installed, a descriptive error will be raised with installation instructions.
-- `Certificate.verify_cert_timestamp(ingress_expiry_ns)` — validates the certificate’s `time` label against local clock with a configurable skew window.
+- **Optional certificate verification**  
+  - Introduced BLS12-381 certificate verification using the official [`blst`](https://github.com/supranational/blst) Python binding.  
+  - New parameter `verify_certificate` in `Agent.update_raw`.  
+  - When `verify_certificate=True`, update calls are verified against the IC’s certified responses.  
+  - Includes full unit test coverage for verification scenarios.  
 
 ### Changed
-- `Agent.poll(...)` and `Agent.poll_and_wait(...)` accept the same `verify_certificate` flag internally to keep verification consistent while polling.
+- **Endpoint upgrade**  
+  - Migrated `update_raw` calls from legacy `/api/v2/.../call` endpoint to new **BN v3 call endpoint** (`/api/v3/canister/.../call`).  
+  - Implemented response adaptation and improved retry logic for more stable request handling.  
+  - Enhanced the `poll` and `poll_and_wait` methods for correctness and resilience.  
 
-### Notes
-- Default behavior remains **unchanged**: certificate verification is **off** unless `verify_certificate=True` is explicitly passed.
-- For production environments, enabling certificate verification is **strongly recommended**.
+- **Timeouts & error classification**  
+  - Added configurable timeout handling in client calls.  
+  - Improved error classification for common canister rejection codes, with more structured runtime exceptions.
+
+### Security
+- Addresses longstanding gaps in certificate validation:  
+  - `update_raw` and `poll` now support certificate verification when enabled.  
+  - Protects against unverified responses from boundary nodes.
+
+### References
+- [DFINITY forum: Reducing end-to-end latencies](https://forum.dfinity.org/t/reducing-end-to-end-latencies-on-the-internet-computer/34383)  
+- [DFINITY forum: Boundary node roadmap](https://forum.dfinity.org/t/boundary-node-roadmap/15562/104)  
+- [GitHub issue #117](https://github.com/rocklabs-io/ic-py/issues/117)  
+- [GitHub issue #115](https://github.com/rocklabs-io/ic-py/issues/115)  
+- [Forum discussion: Unmaintained agents & vulnerabilities](https://forum.dfinity.org/t/unmaintained-ic-agents-containing-vulnerabilities/41589)  
+- [GitHub issue #109](https://github.com/rocklabs-io/ic-py/issues/109)  
+- [GitHub issue #76](https://github.com/rocklabs-io/ic-py/issues/76)  
