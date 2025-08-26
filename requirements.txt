@@ -1,0 +1,9 @@
+antlr4-python3-runtime~=4.9.3
+cbor2~=5.4.2
+httpx~=0.22.0
+leb128~=1.0.4
+ecdsa~=0.18.0b2
+mnemonic~=0.20
+zlib~=1.2.13
+setuptools~=72.1.0
+pytest~=8.4.1
